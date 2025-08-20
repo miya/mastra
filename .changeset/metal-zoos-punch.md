@@ -2,4 +2,4 @@
 "@mastra/core": patch
 ---
 
-Finalize loop
+Model loop changes

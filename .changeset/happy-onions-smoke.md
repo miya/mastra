@@ -2,4 +2,4 @@
 "@mastra/core": patch
 ---
 
-Loop wip
+loop code and tests
