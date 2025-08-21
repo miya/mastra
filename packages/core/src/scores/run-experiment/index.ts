@@ -74,8 +74,8 @@ export const runExperiment = async <const TScorer extends readonly MastraScorer[
       scoreAccumulator.addScores(scorerResults);
 
       // Handle workflow step scores if applicable
-      if (targetResult && 'scoringData' in targetResult && targetResult.scoringData?.stepScorerResults) {
-        scoreAccumulator.addStepScores(targetResult.scoringData.stepScorerResults);
+      if ('scoringData' in targetResult && 'stepScorerResults' in (targetResult as any).scoringData) {
+        scoreAccumulator.addStepScores((targetResult.scoringData as any).stepScorerResults);
       }
 
       if (onItemComplete) {
@@ -100,7 +100,7 @@ const validateExperimentInputs = <const TScorer extends readonly MastraScorer[]>
   data: RunExperimentDataItem[],
   scorers: TScorer,
   target: Agent | Workflow,
-  workflowConfig?: WorkflowRunExperimentConfig
+  workflowConfig?: WorkflowRunExperimentConfig,
 ) => {
   if (data.length === 0) {
     throw new MastraError({
@@ -142,7 +142,7 @@ const validateExperimentInputs = <const TScorer extends readonly MastraScorer[]>
 const executeTarget = async (
   target: Agent | Workflow,
   item: RunExperimentDataItem,
-  workflowConfig?: WorkflowRunExperimentConfig
+  workflowConfig?: WorkflowRunExperimentConfig,
 ) => {
   try {
     if (target instanceof Workflow) {
@@ -169,14 +169,11 @@ const executeTarget = async (
   }
 };
 
-const executeWorkflow = async (
-  item: RunExperimentDataItem,
-  workflowConfig: WorkflowRunExperimentConfig
-) => {
+const executeWorkflow = async (item: RunExperimentDataItem, workflowConfig: WorkflowRunExperimentConfig) => {
   const run = workflowConfig.workflow.createRun({ disableScorers: true });
   const workflowResult = await run.start({
     inputData: item.input,
-    runtimeContext: item.runtimeContext
+    runtimeContext: item.runtimeContext,
   });
 
   const stepScorerResults: Record<string, any> = {};
@@ -184,11 +181,7 @@ const executeWorkflow = async (
   for (const [stepId, stepScorers] of Object.entries(workflowConfig.stepScorers)) {
     const stepResult = workflowResult.steps[stepId];
     if (stepResult?.status === 'success' && stepResult.payload && stepResult.output) {
-      stepScorerResults[stepId] = await runStepScorers(
-        stepScorers,
-        stepResult,
-        item
-      );
+      stepScorerResults[stepId] = await runStepScorers(stepScorers, stepResult, item);
     }
   }
 
@@ -197,16 +190,12 @@ const executeWorkflow = async (
       input: item.input,
       output: workflowResult.status === 'success' ? workflowResult.result : undefined,
       stepResults: workflowResult.steps,
-      stepScorerResults
-    }
+      stepScorerResults,
+    },
   };
 };
 
-const runStepScorers = async (
-  stepScorers: MastraScorer[],
-  stepResult: any,
-  item: RunExperimentDataItem
-) => {
+const runStepScorers = async (stepScorers: MastraScorer[], stepResult: any, item: RunExperimentDataItem) => {
   const results: Record<string, any> = {};
 
   for (const scorer of stepScorers) {
@@ -227,10 +216,7 @@ const runStepScorers = async (
   return results;
 };
 
-const executeAgent = async (
-  agent: Agent,
-  item: RunExperimentDataItem
-) => {
+const executeAgent = async (agent: Agent, item: RunExperimentDataItem) => {
   const model = await agent.getModel();
 
   if (model.specificationVersion === 'v2') {
@@ -251,7 +237,7 @@ const executeAgent = async (
 const runScorers = async <const TScorer extends readonly MastraScorer[]>(
   scorers: TScorer,
   targetResult: any,
-  item: RunExperimentDataItem
+  item: RunExperimentDataItem,
 ): Promise<ScorerResults<TScorer>> => {
   const scorerResults: ScorerResults<TScorer> = {} as ScorerResults<TScorer>;
 
@@ -264,8 +250,7 @@ const runScorers = async <const TScorer extends readonly MastraScorer[]>(
         runtimeContext: item.runtimeContext,
       });
 
-      scorerResults[scorer.name as keyof ScorerResults<TScorer>] =
-        score as ScorerResults<TScorer>[typeof scorer.name];
+      scorerResults[scorer.name as keyof ScorerResults<TScorer>] = score as ScorerResults<TScorer>[typeof scorer.name];
     } catch (error) {
       throw new MastraError(
         {
@@ -285,4 +270,3 @@ const runScorers = async <const TScorer extends readonly MastraScorer[]>(
 
   return scorerResults;
 };
-
