@@ -1,16 +1,21 @@
 import { MockLanguageModelV1 } from 'ai/test';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Agent } from '../agent';
-import { RuntimeContext } from '../runtime-context';
-import { createScorer } from './base';
-import type { MastraScorer } from './base';
-import { runExperiment } from './run-experiment';
+import { Agent } from '../../agent';
+import { RuntimeContext } from '../../runtime-context';
+import { createScorer } from '../base';
+import type { MastraScorer } from '../base';
+import { runExperiment } from '.';
+import { createWorkflow, createStep } from '../../workflows';
+import { z } from 'zod';
 
 const createMockScorer = (name: string, score: number = 0.8): MastraScorer => {
   const scorer = createScorer({
     description: 'Mock scorer',
     name,
-  }).generateScore(() => score);
+  }).generateScore(() => {
+    console.log('Generating name', name, score);
+    return score;
+  });
 
   vi.spyOn(scorer, 'run');
 
@@ -244,6 +249,162 @@ describe('runExperiment', () => {
           target: mockAgent,
         }),
       ).rejects.toThrow();
+    });
+  });
+
+  describe('Workflow integration', () => {
+    it('should run experiment with workflow target', async () => {
+      // Create a simple workflow
+      const mockStep = createStep({
+        id: 'test-step',
+        inputSchema: z.object({ input: z.string() }),
+        outputSchema: z.object({ output: z.string() }),
+        execute: async ({ inputData }) => {
+          return { output: `Processed: ${inputData.input}` };
+        },
+      });
+
+      const workflow = createWorkflow({
+        id: 'test-workflow',
+        inputSchema: z.object({ input: z.string() }),
+        outputSchema: z.object({ output: z.string() }),
+      })
+        .then(mockStep)
+        .commit();
+
+      const result = await runExperiment({
+        data: [
+          { input: { input: 'Test input 1' }, groundTruth: 'Expected 1' },
+          { input: { input: 'Test input 2' }, groundTruth: 'Expected 2' },
+        ],
+        scorers: [mockScorers[0]],
+        target: workflow,
+        workflowConfig: {
+          workflow,
+          stepScorers: {
+            'test-step': [mockScorers[0]],
+          },
+        },
+      });
+
+      expect(result.scores.toxicity).toBe(0.9);
+      expect(result.summary.totalItems).toBe(2);
+    });
+
+    it('should override step scorers to be empty during workflow execution', async () => {
+      // Create a step with scorers already attached
+      const mockStep = createStep({
+        id: 'test-step',
+        inputSchema: z.object({ input: z.string() }),
+        outputSchema: z.object({ output: z.string() }),
+        scorers: { existingScorer: { scorer: mockScorers[0] } },
+        execute: async ({ inputData }) => {
+          return { output: `Processed: ${inputData.input}` };
+        },
+      });
+
+      const workflow = createWorkflow({
+        id: 'test-workflow',
+        inputSchema: z.object({ input: z.string() }),
+        outputSchema: z.object({ output: z.string() }),
+      })
+        .then(mockStep)
+        .commit();
+
+      await runExperiment({
+        data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
+        scorers: [mockScorers[1]],
+        target: workflow,
+        workflowConfig: {
+          workflow,
+          stepScorers: {
+            'test-step': [mockScorers[1]],
+          },
+        },
+      });
+
+      expect(mockScorers[0].run).not.toHaveBeenCalled();
+      expect(mockScorers[1].run).toHaveBeenCalled();
+    });
+
+    it('should run scorers on individual step results', async () => {
+      const mockStep = createStep({
+        id: 'test-step',
+        inputSchema: z.object({ input: z.string() }),
+        outputSchema: z.object({ output: z.string() }),
+        execute: async ({ inputData }) => {
+          return { output: `Processed: ${inputData.input}` };
+        },
+      });
+
+      const workflow = createWorkflow({
+        id: 'test-workflow',
+        inputSchema: z.object({ input: z.string() }),
+        outputSchema: z.object({ output: z.string() }),
+      })
+        .then(mockStep)
+        .commit();
+
+      // Mock the scorer to track what it receives
+      const mockScorer = createMockScorer('step-scorer', 0.8);
+      const scorerSpy = vi.spyOn(mockScorer, 'run');
+
+      const result = await runExperiment({
+        data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
+        scorers: [mockScorer],
+        target: workflow,
+        workflowConfig: {
+          workflow,
+          stepScorers: {
+            'test-step': [mockScorer],
+          },
+        },
+      });
+
+      // Verify the scorer was called with step-specific data
+      expect(scorerSpy).toHaveBeenCalledWith({
+        input: { input: 'Test input' }, // step payload
+        output: { output: 'Processed: Test input' }, // step output
+        groundTruth: 'Expected',
+        runtimeContext: undefined,
+      });
+    });
+
+    it('should capture step scorer results in experiment output', async () => {
+      const mockStep = createStep({
+        id: 'test-step',
+        inputSchema: z.object({ input: z.string() }),
+        outputSchema: z.object({ output: z.string() }),
+        execute: async ({ inputData }) => {
+          return { output: `Processed: ${inputData.input}` };
+        },
+      });
+
+      const workflow = createWorkflow({
+        id: 'test-workflow',
+        inputSchema: z.object({ input: z.string() }),
+        outputSchema: z.object({ output: z.string() }),
+      })
+        .then(mockStep)
+        .commit();
+
+      const mockScorer = createMockScorer('step-scorer', 0.8);
+
+      const result = await runExperiment({
+        data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
+        scorers: [mockScorer],
+        target: workflow,
+        workflowConfig: {
+          workflow,
+          stepScorers: {
+            'test-step': [mockScorer],
+          },
+        },
+      });
+
+      // Verify the experiment result includes step scorer results
+      expect(result.scores['step-scorer']).toBe(0.8);
+      expect(result.summary.totalItems).toBe(1);
     });
   });
 });

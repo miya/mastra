@@ -13,6 +13,7 @@ import { ExecutionEngine } from './execution-engine';
 import type { ExecuteFunction, Step } from './step';
 import type { Emitter, StepFailure, StepResult, StepSuccess } from './types';
 import type { DefaultEngineType, SerializedStepFlowEntry, StepFlowEntry } from './workflow';
+import { runScorer } from '../scores/hooks';
 
 export type ExecutionContext = {
   workflowId: string;
@@ -146,6 +147,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
   async execute<TInput, TOutput>(params: {
     workflowId: string;
     runId: string;
+    disableScorers?: boolean;
     graph: ExecutionGraph;
     serializedStepGraph: SerializedStepFlowEntry[];
     input?: TInput;
@@ -166,7 +168,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController: AbortController;
     writableStream?: WritableStream<ChunkType>;
   }): Promise<TOutput> {
-    const { workflowId, runId, graph, input, resume, retryConfig, runtimeContext, parentAISpan } = params;
+    const { workflowId, runId, graph, input, resume, retryConfig, runtimeContext, parentAISpan, disableScorers } = params;
     const { attempts = 0, delay = 0 } = retryConfig ?? {};
     const steps = graph.steps;
 
@@ -253,6 +255,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
           emitter: params.emitter,
           runtimeContext: params.runtimeContext,
           writableStream: params.writableStream,
+          disableScorers,
         });
 
         // if step result is not success, stop and return
@@ -607,6 +610,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     runtimeContext,
     skipEmits = false,
     writableStream,
+    disableScorers,
   }: {
     workflowId: string;
     runId: string;
@@ -623,6 +627,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     runtimeContext: RuntimeContext;
     skipEmits?: boolean;
     writableStream?: WritableStream<ChunkType>;
+    disableScorers?: boolean;
   }): Promise<StepResult<any, any, any, any>> {
     const startTime = resume?.steps[0] === step.id ? undefined : Date.now();
     const resumeTime = resume?.steps[0] === step.id ? Date.now() : undefined;
@@ -779,8 +784,36 @@ export class DefaultExecutionEngine extends ExecutionEngine {
             },
             writableStream,
           ),
+          scorers: disableScorers === false ? undefined : step.scorers,
         });
 
+        let scorersToUse = step.scorers;
+        if (typeof scorersToUse === 'function') {
+          scorersToUse = await scorersToUse({
+            runtimeContext: runtimeContext,
+          });
+        }
+  
+        if (!disableScorers && scorersToUse && Object.keys(scorersToUse || {}).length > 0) {
+          for (const [id, scorerObject] of Object.entries(scorersToUse || {})) {
+            runScorer({
+              scorerId: id,
+              scorerObject: scorerObject,
+              runId: runId,
+              input: [prevOutput],
+              output: result,
+              runtimeContext: runtimeContext,
+              entity: {
+                id: workflowId,
+                stepId: step.id,
+              },
+              structuredOutput: true,
+              source: 'LIVE',
+              entityType: 'WORKFLOW',
+            });
+          }
+        }
+  
         if (suspended) {
           execResults = { status: 'suspended', suspendPayload: suspended.payload, suspendedAt: Date.now() };
         } else if (bailed) {
@@ -902,6 +935,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController,
     runtimeContext,
     writableStream,
+    disableScorers,
   }: {
     workflowId: string;
     runId: string;
@@ -920,6 +954,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController: AbortController;
     runtimeContext: RuntimeContext;
     writableStream?: WritableStream<ChunkType>;
+    disableScorers?: boolean;
   }): Promise<StepResult<any, any, any, any>> {
     let execResults: any;
     const results: { result: StepResult<any, any, any, any> }[] = await Promise.all(
@@ -944,6 +979,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
           abortController,
           runtimeContext,
           writableStream,
+          disableScorers,
         }),
       ),
     );
@@ -988,6 +1024,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController,
     runtimeContext,
     writableStream,
+    disableScorers,
   }: {
     workflowId: string;
     runId: string;
@@ -1011,6 +1048,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController: AbortController;
     runtimeContext: RuntimeContext;
     writableStream?: WritableStream<ChunkType>;
+    disableScorers?: boolean;
   }): Promise<StepResult<any, any, any, any>> {
     let execResults: any;
     const truthyIndexes = (
@@ -1113,6 +1151,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
           abortController,
           runtimeContext,
           writableStream,
+          disableScorers,
         }),
       ),
     );
@@ -1178,6 +1217,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController,
     runtimeContext,
     writableStream,
+    disableScorers,
   }: {
     workflowId: string;
     runId: string;
@@ -1201,6 +1241,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController: AbortController;
     runtimeContext: RuntimeContext;
     writableStream?: WritableStream<ChunkType>;
+    disableScorers?: boolean;
   }): Promise<StepResult<any, any, any, any>> {
     const { step, condition } = entry;
     let isTrue = true;
@@ -1221,6 +1262,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
         abortController,
         runtimeContext,
         writableStream,
+        disableScorers,
       });
 
       // Clear resume for next iteration only if the step has completed resuming
@@ -1284,6 +1326,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController,
     runtimeContext,
     writableStream,
+    disableScorers,
   }: {
     workflowId: string;
     runId: string;
@@ -1308,6 +1351,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController: AbortController;
     runtimeContext: RuntimeContext;
     writableStream?: WritableStream<ChunkType>;
+    disableScorers?: boolean;
   }): Promise<StepResult<any, any, any, any>> {
     const { step, opts } = entry;
     const results: StepResult<any, any, any, any>[] = [];
@@ -1371,6 +1415,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
             runtimeContext,
             skipEmits: true,
             writableStream,
+            disableScorers,
           });
         }),
       );
@@ -1552,6 +1597,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController,
     runtimeContext,
     writableStream,
+    disableScorers,
   }: {
     workflowId: string;
     runId: string;
@@ -1570,6 +1616,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController: AbortController;
     runtimeContext: RuntimeContext;
     writableStream?: WritableStream<ChunkType>;
+    disableScorers?: boolean;
   }): Promise<{
     result: StepResult<any, any, any, any>;
     stepResults?: Record<string, StepResult<any, any, any, any>>;
@@ -1592,6 +1639,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
         abortController,
         runtimeContext,
         writableStream,
+        disableScorers,
       });
     } else if (resume?.resumePath?.length && entry.type === 'parallel') {
       const idx = resume.resumePath.shift();
@@ -1615,6 +1663,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
         abortController,
         runtimeContext,
         writableStream,
+        disableScorers,
       });
 
       // After resuming one parallel step, check if ALL parallel steps are complete
@@ -1707,6 +1756,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
         abortController,
         runtimeContext,
         writableStream,
+        disableScorers,
       });
     } else if (entry.type === 'conditional') {
       execResults = await this.executeConditional({
@@ -1723,6 +1773,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
         abortController,
         runtimeContext,
         writableStream,
+        disableScorers,
       });
     } else if (entry.type === 'loop') {
       execResults = await this.executeLoop({
@@ -1738,6 +1789,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
         abortController,
         runtimeContext,
         writableStream,
+        disableScorers,
       });
     } else if (entry.type === 'foreach') {
       execResults = await this.executeForeach({
@@ -1753,6 +1805,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
         abortController,
         runtimeContext,
         writableStream,
+        disableScorers,
       });
     } else if (entry.type === 'sleep') {
       const startedAt = Date.now();
@@ -2071,6 +2124,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
           abortController,
           runtimeContext,
           writableStream,
+          disableScorers,
         });
       } catch (error) {
         execResults = {
