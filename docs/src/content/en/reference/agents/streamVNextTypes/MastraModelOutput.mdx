@@ -4,7 +4,6 @@ description: "Documentation for the MastraModelOutput class, the streaming inter
 ---
 
 import { Callout } from "nextra/components";
-import { generateDefinition } from "nextra/tsdoc";
 import { TSDocPropertiesTable } from "@/components/tsdoc-properties-table";
 
 # MastraModelOutput
@@ -32,34 +31,21 @@ const fullOutput = await stream.getFullOutput();
 
 ### Streaming properties
 
-{/* <TSDocPropertiesTable 
+<TSDocPropertiesTable 
   properties={["fullStream", "textStream", "objectStream", "elementStream"]}
-  definition={generateDefinition({
-    code: `import type { MastraModelOutput } from '@mastra/core'
+  code={`
+    import type { MastraModelOutput } from '@mastra/core'
     export default MastraModelOutput
-    `
-  })}
-/> */}
+    `}
+/>
 
 ### Promise-based properties
 
 <TSDocPropertiesTable 
-  filter={(content) => [
-    "text", 
-    "usage", 
-    "reasoning", 
-    "reasoningText", 
-    "toolCalls", 
-    "toolResults", 
-    "object", 
-    "finishReason", 
-    "error"
-    ].includes(content.name)}
-  definition={generateDefinition({
-    code: `import type { MastraModelOutput } from '@mastra/core'
+  properties={["text", "usage", "reasoning", "reasoningText", "toolCalls", "toolResults", "object", "finishReason", "error"]}
+  code={`import type { MastraModelOutput } from '@mastra/core'
     export default MastraModelOutput
-    `
-  })}
+    `}
 />
 
 ## Methods

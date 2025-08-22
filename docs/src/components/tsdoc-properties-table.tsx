@@ -4,9 +4,15 @@ import { PropertiesTable } from "./properties-table";
 
 interface TSDocToPropertiesTableProps {
   /**
-   * The definition to parse.
+   * The code to parse into a tsdoc definition.
+   * It should export a valid TypeScript type definition, function, class, or interface as the default export.
+   * @example
+   * ```typescript
+   * import type { MastraModelOutput } from '@mastra/core'
+   * export default MastraModelOutput
+   * ```
    */
-  definition: ReturnType<typeof generateDefinition>;
+  code: string;
   /**
    * Filter to apply to the properties.
    * If not provided, all properties will be included.
@@ -23,10 +29,11 @@ interface TSDocToPropertiesTableProps {
  * Component that uses TSDoc to parse TypeScript types and renders them using PropertiesTable
  */
 export const TSDocPropertiesTable: React.FC<TSDocToPropertiesTableProps> = ({
-  definition,
+  code,
   filter,
   properties,
 }) => {
+  const definition = generateDefinition({ code });
   let content: ContentItem[] = [];
   if ("entries" in definition) {
     content = definitionToContent(definition);
