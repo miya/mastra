@@ -5,7 +5,9 @@ import { ConsoleLogger } from './logger/default-logger';
 import type { Telemetry } from './telemetry';
 
 export class MastraBase {
+  /** @internal */
   component: RegisteredLogger = RegisteredLogger.LLM;
+  /** @internal */
   protected logger: IMastraLogger;
   name?: string;
   telemetry?: Telemetry;
@@ -19,6 +21,7 @@ export class MastraBase {
   /**
    * Set the logger for the agent
    * @param logger
+   * @internal
    */
   __setLogger(logger: IMastraLogger) {
     this.logger = logger;
@@ -31,6 +34,7 @@ export class MastraBase {
   /**
    * Set the telemetry for the
    * @param telemetry
+   * @internal
    */
   __setTelemetry(telemetry: Telemetry) {
     this.telemetry = telemetry;
@@ -43,14 +47,16 @@ export class MastraBase {
   /**
    * Get the telemetry on the vector
    * @returns telemetry
+   * @internal
    */
   __getTelemetry() {
     return this.telemetry;
   }
 
-  /* 
-    get experimental_telemetry config
-    */
+  /**
+   * get experimental_telemetry config
+   * @internal
+   */
   get experimental_telemetry() {
     return this.telemetry
       ? {
