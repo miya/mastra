@@ -68,19 +68,18 @@ abstract class BaseFormatHandler<TObjectSchema extends OutputSchema = undefined>
    */
   readonly partialSchema?: ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>> | undefined;
 
-  constructor(schema?: TObjectSchema) {
+  constructor(schema?: TObjectSchema, options: { validatePartialChunks?: boolean } = {}) {
     if (!schema) {
       this.schema = undefined;
     } else {
       this.schema = asSchema(schema);
     }
-    // TODO: test partial chunk validation with zod schemas
-    // if (options.validatePartialChunks) {
-    //   if (schema !== undefined && 'partial' in schema && typeof schema.partial === 'function') {
-    //     this.validatePartialChunks = true;
-    //     this.partialSchema = schema.partial() as ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>>;
-    //   }
-    // }
+    if (options.validatePartialChunks) {
+      if (schema !== undefined && 'partial' in schema && typeof schema.partial === 'function') {
+        this.validatePartialChunks = true;
+        this.partialSchema = schema.partial() as ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>>;
+      }
+    }
   }
 
   /**
@@ -116,18 +115,23 @@ class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined> extend
   }: ProcessPartialChunkParams): Promise<ProcessPartialChunkResult> {
     const { value: currentObjectJson, state } = await parsePartialJson(accumulatedText);
 
-    // TODO: partial object chunk validation with zod schemas
-    // if (this.validatePartialChunks && this.partialSchema) {
-    //   const result = this.partialSchema?.safeParse(currentObjectJson);
-    //   if (result.success && result.data && result.data !== undefined && !isDeepEqualData(previousObject, result.data)) {
-    //     return {
-    //       shouldEmit: true,
-    //       emitValue: result.data,
-    //       newPreviousResult: result.data,
-    //     };
-    //   }
-    //   return { shouldEmit: false };
-    // }
+    // TODO: test partial object chunk validation with schema.partial()
+    if (this.validatePartialChunks && this.partialSchema) {
+      const result = this.partialSchema?.safeParse(currentObjectJson);
+      if (result.success && result.data && result.data !== undefined && !isDeepEqualData(previousObject, result.data)) {
+        return {
+          shouldEmit: true,
+          emitValue: result.data,
+          newPreviousResult: result.data,
+        };
+      }
+      /**
+       * TODO: emit error chunk if partial validation fails?
+       * maybe we need to either not emit the object chunk,
+       * emit our error chunk, or wait until final parse to emit the error chunk?
+       */
+      return { shouldEmit: false };
+    }
 
     if (
       currentObjectJson !== undefined &&
@@ -201,7 +205,8 @@ class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends
     previousObject,
   }: ProcessPartialChunkParams): Promise<ProcessPartialChunkResult> {
     const { value: currentObjectJson, state: parseState } = await parsePartialJson(accumulatedText);
-
+    // TODO: parse/validate partial array elements, emit error chunk if validation fails
+    // using this.partialSchema / this.validatePartialChunks
     if (currentObjectJson !== undefined && !isDeepEqualData(previousObject, currentObjectJson)) {
       // For arrays, extract and filter elements
       const rawElements = (currentObjectJson as any)?.elements || [];
@@ -335,7 +340,6 @@ class EnumFormatHandler<TObjectSchema extends OutputSchema = undefined> extends 
     previousObject,
   }: ProcessPartialChunkParams): Promise<ProcessPartialChunkResult> {
     const { value: currentObjectJson } = await parsePartialJson(accumulatedText);
-
     if (
       currentObjectJson !== undefined &&
       currentObjectJson !== null &&
