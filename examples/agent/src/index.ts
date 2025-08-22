@@ -1,17 +1,53 @@
 import { z } from 'zod';
 import { mastra } from './mastra';
 
-const agent = mastra.getAgent('chefAgent');
-const responsesAgent = mastra.getAgent('chefAgentResponses');
-const agentThatHarassesYou = mastra.getAgent('agentThatHarassesYou');
+const agent = mastra.getAgent('chefModelV2Agent');
 
-const stream = await agentThatHarassesYou.streamVNext('I want to fight you');
+const generateResult = await agent.generateVNext("Hey, what's up?", {
+  // structuredOutput: {
+  //   schema: z.object({
+  //     text: z.string(),
+  //     number: z.number(),
+  //   }),
+  // },
+  output: z.object({
+    text: z.string(),
+    number: z.number(),
+  }),
+});
 
-for await (const chunk of stream.textStream) {
-  console.log(`frontend received chunk: ${chunk}`);
+console.log(generateResult.object.text);
+
+const stream = await agent.streamVNext("Hey, what's up?", {
+  output: z.object({
+    text: z.string(),
+    number: z.number(),
+  }),
+});
+
+for await (const chunk of stream.fullStream) {
+  if (chunk.type === 'object') {
+    console.log(chunk.object);
+  }
 }
 
-console.log('done');
+const finalObjectResult = await stream.object;
+console.log(finalObjectResult);
+
+for await (const element of stream.elementStream) {
+  console.log(element);
+}
+
+// const responsesAgent = mastra.getAgent('chefAgentResponses');
+// const agentThatHarassesYou = mastra.getAgent('agentThatHarassesYou');
+
+// const stream = await agentThatHarassesYou.streamVNext('I want to fight you');
+
+// for await (const chunk of stream.textStream) {
+//   console.log(`frontend received chunk: ${chunk}`);
+// }
+
+// console.log('done');
 
 // async function text() {
 //   // Query 1: Basic pantry ingredients

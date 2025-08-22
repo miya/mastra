@@ -32,14 +32,14 @@ const fullOutput = await stream.getFullOutput();
 
 ### Streaming properties
 
-<TSDocPropertiesTable 
-  filter={(content) => ["fullStream", "textStream", "objectStream", "elementStream"].includes(content.name)}
+{/* <TSDocPropertiesTable 
+  properties={["fullStream", "textStream", "objectStream", "elementStream"]}
   definition={generateDefinition({
     code: `import type { MastraModelOutput } from '@mastra/core'
     export default MastraModelOutput
     `
   })}
-/>
+/> */}
 
 ### Promise-based properties
 

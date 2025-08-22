@@ -23,6 +23,19 @@ const stream = await agent.streamVNext("Hello", { format: 'aisdk' });
 return stream.toUIMessageStreamResponse();
 ```
 
+
+### Streaming properties
+
+<TSDocPropertiesTable 
+  properties={["fullStream", "textStream", "objectStream", "elementStream"]}
+  definition={generateDefinition({
+    code: `import type { AISDKV5OutputStream } from '@mastra/core'
+    export default AISDKV5OutputStream
+    `
+  })}
+/>
+
+
 ## AI SDK v5 Integration Methods
 
 ### toUIMessageStreamResponse()
