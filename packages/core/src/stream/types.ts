@@ -8,8 +8,7 @@ import type {
 } from '@ai-sdk/provider-v5';
 import type { LanguageModelV1StreamPart, LanguageModelRequestMetadata } from 'ai';
 import type { CoreMessage, StepResult } from 'ai-v5';
-import type z from 'zod';
-import type { InferSchemaOutput, OutputSchema, PartialSchemaOutput } from './base/schema';
+import type { OutputSchema, PartialSchemaOutput } from './base/schema';
 
 export enum ChunkFrom {
   AGENT = 'AGENT',

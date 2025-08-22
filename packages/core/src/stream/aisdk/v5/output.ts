@@ -6,7 +6,8 @@ import type { ObjectStreamPart, TextStreamPart, ToolSet, UIMessage, UIMessageStr
 import type z from 'zod';
 import type { MessageList } from '../../../agent/message-list';
 import type { MastraModelOutput } from '../../base/output';
-import { getResponseFormat, type OutputSchema } from '../../base/schema';
+import { getResponseFormat } from '../../base/schema';
+import type { OutputSchema } from '../../base/schema';
 import type { ChunkType } from '../../types';
 import type { ConsumeStreamOptions } from './compat';
 import { getResponseUIMessageId, convertFullStreamChunkToUIMessageStream } from './compat';

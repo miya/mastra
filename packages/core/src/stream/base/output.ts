@@ -6,6 +6,7 @@ import { consumeStream } from 'ai-v5';
 import type { FinishReason, TelemetrySettings } from 'ai-v5';
 import { TripWire } from '../../agent';
 import { MessageList } from '../../agent/message-list';
+import type { AIV5Type } from '../../agent/message-list/types';
 import { MastraBase } from '../../base';
 import type { OutputProcessor } from '../../processors';
 import type { ProcessorState } from '../../processors/runner';
@@ -16,8 +17,8 @@ import { AISDKV5OutputStream } from '../aisdk/v5/output';
 import { reasoningDetailsFromMessages, transformSteps } from '../aisdk/v5/output-helpers';
 import type { BufferedByStep, ChunkType, StepBufferItem } from '../types';
 import { createJsonTextStreamTransformer, createObjectStreamTransformer } from './output-format-handlers';
-import { getTransformedSchema, type InferSchemaOutput, type OutputSchema, type PartialSchemaOutput } from './schema';
-import type { AIV5Type } from '../../agent/message-list/types';
+import { getTransformedSchema } from './schema';
+import type { InferSchemaOutput, OutputSchema, PartialSchemaOutput } from './schema';
 
 export class JsonToSseTransformStream extends TransformStream<unknown, string> {
   constructor() {

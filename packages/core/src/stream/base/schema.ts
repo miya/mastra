@@ -1,7 +1,7 @@
 import { asSchema } from 'ai-v5';
 import type { JSONSchema7, Schema } from 'ai-v5';
-import type z4 from 'zod/v4';
 import type z3 from 'zod/v3';
+import type z4 from 'zod/v4';
 
 export type PartialSchemaOutput<OUTPUT extends OutputSchema = undefined> = OUTPUT extends undefined
   ? undefined
