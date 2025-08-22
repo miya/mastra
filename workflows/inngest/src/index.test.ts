@@ -16,6 +16,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { z } from 'zod';
 import { init, serve as inngestServe } from './index';
+import { createScorer, MastraScorer, runExperiment } from '@mastra/core/scores';
 
 interface LocalTestContext {
   inngestPort: number;
@@ -7810,6 +7811,247 @@ describe('MastraInngestWorkflow', () => {
           type: 'finish',
         },
       ]);
+    });
+
+    // TODO: clean up this test
+    describe('Workflow integration', () => {
+      let mockAgent: Agent;
+      let mockScorers: MastraScorer[];
+      let testData: any[];
+
+      beforeEach(() => {
+        const createMockScorer = (name: string, score: number = 0.8): MastraScorer => {
+          const scorer = createScorer({
+            description: 'Mock scorer',
+            name,
+          }).generateScore(() => {
+            console.log('Generating name', name, score);
+            return score;
+          });
+
+          vi.spyOn(scorer, 'run');
+
+          return scorer;
+        };
+
+        const createMockAgent = (response: string = 'Dummy response'): Agent => {
+          const dummyModel = new MockLanguageModelV1({
+            doGenerate: async () => ({
+              rawCall: { rawPrompt: null, rawSettings: {} },
+              finishReason: 'stop',
+              usage: { promptTokens: 10, completionTokens: 20 },
+              text: response,
+            }),
+          });
+
+          const agent = new Agent({
+            name: 'mockAgent',
+            instructions: 'Mock agent',
+            model: dummyModel,
+          });
+
+          // Add a spy to the generate method (without mocking the return value)
+          vi.spyOn(agent, 'generate');
+
+          return agent;
+        };
+        vi.clearAllMocks();
+        mockAgent = createMockAgent();
+        mockScorers = [createMockScorer('toxicity', 0.9), createMockScorer('relevance', 0.7)];
+        testData = [
+          { input: 'Test input 1', groundTruth: 'Expected 1' },
+          { input: 'Test input 2', groundTruth: 'Expected 2' },
+        ];
+      });
+
+      it('should run experiment with workflow target', async ctx => {
+        const inngest = new Inngest({
+          id: 'mastra',
+          baseUrl: `http://localhost:${(ctx as any).inngestPort}`,
+          middleware: [realtimeMiddleware()],
+        });
+
+        const { createWorkflow, createStep } = init(inngest);
+
+        // Create a simple workflow
+        const mockStep = createStep({
+          id: 'test-step',
+          inputSchema: z.object({ input: z.string() }),
+          outputSchema: z.object({ output: z.string() }),
+          execute: async ({ inputData }) => {
+            return { output: `Processed: ${inputData.input}` };
+          },
+        });
+
+        const workflow = createWorkflow({
+          id: 'test-workflow',
+          inputSchema: z.object({ input: z.string() }),
+          outputSchema: z.object({ output: z.string() }),
+        })
+          .then(mockStep)
+          .commit();
+
+        const mastra = new Mastra({
+          storage: new DefaultStorage({
+            url: ':memory:',
+          }),
+          workflows: {
+            'test-workflow': workflow,
+          },
+          server: {
+            apiRoutes: [
+              {
+                path: '/inngest/api',
+                method: 'ALL',
+                createHandler: async ({ mastra }) => inngestServe({ mastra, inngest }),
+              },
+            ],
+          },
+        });
+
+        const app = await createHonoServer(mastra);
+
+        const srv = (globServer = serve({
+          fetch: app.fetch,
+          port: (ctx as any).handlerPort,
+        }));
+
+        await resetInngest();
+
+        const result = await runExperiment({
+          data: [
+            { input: { input: 'Test input 1' }, groundTruth: 'Expected 1' },
+            { input: { input: 'Test input 2' }, groundTruth: 'Expected 2' },
+          ],
+          scorers: [mockScorers[0]],
+          target: workflow,
+          workflowConfig: {
+            workflow,
+            stepScorers: {
+              'test-step': [mockScorers[0]],
+            },
+          },
+        });
+        srv.close();
+        expect(result.scores.toxicity).toBe(0.9);
+        expect(result.summary.totalItems).toBe(2);
+      });
+
+      // it('should override step scorers to be empty during workflow execution', async () => {
+      //   // Create a step with scorers already attached
+      //   const mockStep = createStep({
+      //     id: 'test-step',
+      //     inputSchema: z.object({ input: z.string() }),
+      //     outputSchema: z.object({ output: z.string() }),
+      //     scorers: { existingScorer: { scorer: mockScorers[0] } },
+      //     execute: async ({ inputData }) => {
+      //       return { output: `Processed: ${inputData.input}` };
+      //     },
+      //   });
+
+      //   const workflow = createWorkflow({
+      //     id: 'test-workflow',
+      //     inputSchema: z.object({ input: z.string() }),
+      //     outputSchema: z.object({ output: z.string() }),
+      //   })
+      //     .then(mockStep)
+      //     .commit();
+
+      //   await runExperiment({
+      //     data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
+      //     scorers: [mockScorers[1]],
+      //     target: workflow,
+      //     workflowConfig: {
+      //       workflow,
+      //       stepScorers: {
+      //         'test-step': [mockScorers[1]],
+      //       },
+      //     },
+      //   });
+
+      //   expect(mockScorers[0].run).not.toHaveBeenCalled();
+      //   expect(mockScorers[1].run).toHaveBeenCalled();
+      // });
+
+      // it('should run scorers on individual step results', async () => {
+      //   const mockStep = createStep({
+      //     id: 'test-step',
+      //     inputSchema: z.object({ input: z.string() }),
+      //     outputSchema: z.object({ output: z.string() }),
+      //     execute: async ({ inputData }) => {
+      //       return { output: `Processed: ${inputData.input}` };
+      //     },
+      //   });
+
+      //   const workflow = createWorkflow({
+      //     id: 'test-workflow',
+      //     inputSchema: z.object({ input: z.string() }),
+      //     outputSchema: z.object({ output: z.string() }),
+      //   })
+      //     .then(mockStep)
+      //     .commit();
+
+      //   // Mock the scorer to track what it receives
+      //   const mockScorer = createMockScorer('step-scorer', 0.8);
+      //   const scorerSpy = vi.spyOn(mockScorer, 'run');
+
+      //   await runExperiment({
+      //     data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
+      //     scorers: [mockScorer],
+      //     target: workflow,
+      //     workflowConfig: {
+      //       workflow,
+      //       stepScorers: {
+      //         'test-step': [mockScorer],
+      //       },
+      //     },
+      //   });
+
+      //   // Verify the scorer was called with step-specific data
+      //   expect(scorerSpy).toHaveBeenCalledWith({
+      //     input: { input: 'Test input' }, // step payload
+      //     output: { output: 'Processed: Test input' }, // step output
+      //     groundTruth: 'Expected',
+      //     runtimeContext: undefined,
+      //   });
+      // });
+
+      // it('should capture step scorer results in experiment output', async () => {
+      //   const mockStep = createStep({
+      //     id: 'test-step',
+      //     inputSchema: z.object({ input: z.string() }),
+      //     outputSchema: z.object({ output: z.string() }),
+      //     execute: async ({ inputData }) => {
+      //       return { output: `Processed: ${inputData.input}` };
+      //     },
+      //   });
+
+      //   const workflow = createWorkflow({
+      //     id: 'test-workflow',
+      //     inputSchema: z.object({ input: z.string() }),
+      //     outputSchema: z.object({ output: z.string() }),
+      //   })
+      //     .then(mockStep)
+      //     .commit();
+
+      //   const mockScorer = createMockScorer('step-scorer', 0.8);
+
+      //   const result = await runExperiment({
+      //     data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
+      //     scorers: [mockScorer],
+      //     target: workflow,
+      //     workflowConfig: {
+      //       workflow,
+      //       stepScorers: {
+      //         'test-step': [mockScorer],
+      //       },
+      //     },
+      //   });
+
+      //   // Verify the experiment result includes step scorer results
+      //   expect(result.scores['step-scorer']).toBe(0.8);
+      //   expect(result.summary.totalItems).toBe(1);
+      // });
     });
   });
 }, 40e3);

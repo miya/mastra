@@ -14,6 +14,8 @@ import type { ExecuteFunction, Step } from './step';
 import type { Emitter, StepFailure, StepResult, StepSuccess } from './types';
 import type { DefaultEngineType, SerializedStepFlowEntry, StepFlowEntry } from './workflow';
 import { runScorer } from '../scores/hooks';
+import type { MastraScorers } from '../scores';
+import type { DynamicArgument } from '../types';
 
 export type ExecutionContext = {
   workflowId: string;
@@ -168,7 +170,8 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     abortController: AbortController;
     writableStream?: WritableStream<ChunkType>;
   }): Promise<TOutput> {
-    const { workflowId, runId, graph, input, resume, retryConfig, runtimeContext, parentAISpan, disableScorers } = params;
+    const { workflowId, runId, graph, input, resume, retryConfig, runtimeContext, parentAISpan, disableScorers } =
+      params;
     const { attempts = 0, delay = 0 } = retryConfig ?? {};
     const steps = graph.steps;
 
@@ -787,33 +790,19 @@ export class DefaultExecutionEngine extends ExecutionEngine {
           scorers: disableScorers === false ? undefined : step.scorers,
         });
 
-        let scorersToUse = step.scorers;
-        if (typeof scorersToUse === 'function') {
-          scorersToUse = await scorersToUse({
-            runtimeContext: runtimeContext,
+        if (step.scorers) {
+          this.runScorers({
+            scorers: step.scorers,
+            runId,
+            input: prevOutput,
+            output: result,
+            workflowId,
+            stepId: step.id,
+            runtimeContext,
+            disableScorers,
           });
         }
-  
-        if (!disableScorers && scorersToUse && Object.keys(scorersToUse || {}).length > 0) {
-          for (const [id, scorerObject] of Object.entries(scorersToUse || {})) {
-            runScorer({
-              scorerId: id,
-              scorerObject: scorerObject,
-              runId: runId,
-              input: [prevOutput],
-              output: result,
-              runtimeContext: runtimeContext,
-              entity: {
-                id: workflowId,
-                stepId: step.id,
-              },
-              structuredOutput: true,
-              source: 'LIVE',
-              entityType: 'WORKFLOW',
-            });
-          }
-        }
-  
+
         if (suspended) {
           execResults = { status: 'suspended', suspendPayload: suspended.payload, suspendedAt: Date.now() };
         } else if (bailed) {
@@ -920,6 +909,53 @@ export class DefaultExecutionEngine extends ExecutionEngine {
     }
 
     return { ...stepInfo, ...execResults };
+  }
+
+  protected async runScorers({
+    scorers,
+    runId,
+    input,
+    output,
+    workflowId,
+    stepId,
+    runtimeContext,
+    disableScorers,
+  }: {
+    scorers: DynamicArgument<MastraScorers>;
+    runId: string;
+    input: any;
+    output: any;
+    runtimeContext: RuntimeContext;
+    workflowId: string;
+    stepId: string;
+    disableScorers?: boolean;
+  }) {
+    let scorersToUse = scorers;
+    if (typeof scorersToUse === 'function') {
+      scorersToUse = await scorersToUse({
+        runtimeContext: runtimeContext,
+      });
+    }
+
+    if (!disableScorers && scorersToUse && Object.keys(scorersToUse || {}).length > 0) {
+      for (const [id, scorerObject] of Object.entries(scorersToUse || {})) {
+        runScorer({
+          scorerId: id,
+          scorerObject: scorerObject,
+          runId: runId,
+          input: [input],
+          output: output,
+          runtimeContext: runtimeContext,
+          entity: {
+            id: workflowId,
+            stepId: stepId,
+          },
+          structuredOutput: true,
+          source: 'LIVE',
+          entityType: 'WORKFLOW',
+        });
+      }
+    }
   }
 
   async executeParallel({

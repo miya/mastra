@@ -1205,6 +1205,7 @@ export class InngestExecutionEngine extends DefaultExecutionEngine {
     abortController,
     runtimeContext,
     writableStream,
+    disableScorers,
   }: {
     step: Step<string, any, any>;
     stepResults: Record<string, StepResult<any, any, any, any>>;
@@ -1219,6 +1220,7 @@ export class InngestExecutionEngine extends DefaultExecutionEngine {
     abortController: AbortController;
     runtimeContext: RuntimeContext;
     writableStream?: WritableStream<ChunkType>;
+    disableScorers?: boolean;
   }): Promise<StepResult<any, any, any, any>> {
     const startedAt = await this.inngestStep.run(
       `workflow.${executionContext.workflowId}.run.${executionContext.runId}.step.${step.id}.running_ev`,
@@ -1582,6 +1584,21 @@ export class InngestExecutionEngine extends DefaultExecutionEngine {
       return { result: execResults, executionContext, stepResults };
     });
 
+    this.inngestStep.run(`workflow.${executionContext.workflowId}.step.${step.id}.score`, async () => {
+      if (step.scorers) {
+        this.runScorers({
+          scorers: step.scorers,
+          runId: executionContext.runId,
+          input: prevOutput,
+          output: stepRes.result,
+          workflowId: executionContext.workflowId,
+          stepId: step.id,
+          runtimeContext,
+          disableScorers,
+        });
+      }
+    });
+
     // @ts-ignore
     Object.assign(executionContext.suspendedPaths, stepRes.executionContext.suspendedPaths);
     // @ts-ignore
@@ -1649,6 +1666,7 @@ export class InngestExecutionEngine extends DefaultExecutionEngine {
     abortController,
     runtimeContext,
     writableStream,
+    disableScorers,
   }: {
     workflowId: string;
     runId: string;
@@ -1672,6 +1690,7 @@ export class InngestExecutionEngine extends DefaultExecutionEngine {
     abortController: AbortController;
     runtimeContext: RuntimeContext;
     writableStream?: WritableStream<ChunkType>;
+    disableScorers?: boolean;
   }): Promise<StepResult<any, any, any, any>> {
     let execResults: any;
     const truthyIndexes = (
@@ -1754,6 +1773,7 @@ export class InngestExecutionEngine extends DefaultExecutionEngine {
           abortController,
           runtimeContext,
           writableStream,
+          disableScorers,
         }),
       ),
     );
