@@ -4,6 +4,8 @@ description: "Documentation for the AISDKV5OutputStream class, the AI SDK v5 com
 ---
 
 import { Callout } from "nextra/components";
+import { TSDocPropertiesTable } from "@/components/tsdoc-properties-table";
+import { generateDefinition } from "nextra/tsdoc";
 
 # AISDKV5OutputStream
 
@@ -16,17 +18,6 @@ The `AISDKV5OutputStream` class is the streaming interface returned by [`agent.s
 ```typescript
 // Returns AISDKV5OutputStream
 const stream = await agent.streamVNext("Hello", { format: 'aisdk' });
-```
-
-## How to Get an AISDKV5OutputStream
-
-The `AISDKV5OutputStream` is returned when you call `streamVNext()` with `format: 'aisdk'`:
-
-```typescript
-const stream = await agent.streamVNext("Generate a response", {
-  format: 'aisdk'
-});
-// stream is now an AISDKV5OutputStream instance
 
 // Use with AI SDK v5 compatible methods
 return stream.toUIMessageStreamResponse();
@@ -98,6 +89,15 @@ for await (const chunk of uiStream) {
 
 ## Streaming Properties
 
+<TSDocPropertiesTable 
+  filter={(content) => ["fullStream", "textStream", "objectStream", "elementStream"].includes(content.name)}
+  definition={generateDefinition({
+    code: `import type { AISDKV5OutputStream } from '@mastra/core'
+    export default AISDKV5OutputStream
+    `
+  })}
+/>
+
 <PropertiesTable
   content={[
     {
@@ -112,7 +112,7 @@ for await (const chunk of uiStream) {
     },
     {
       name: "objectStream",
-      type: "ReadableStream<TObjectSchema>",
+      type: "ReadableStream<OUTPUT>",
       description: "Stream of structured output objects when using an output schema."
     },
     {

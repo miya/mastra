@@ -18,12 +18,10 @@ The `MastraModelOutput` class is the streaming interface returned by [`agent.str
 ```typescript
 // Returns MastraModelOutput
 const stream = await agent.streamVNext("Hello");
-// or explicitly
-const stream = await agent.streamVNext("Hello", { format: 'mastra' });
 
-// Access different streaming capabilities
-for await (const text of stream.textStream) {
-  console.log(text);
+// Consume the stream
+for await (const chunk of stream.fullStream) {
+  console.log(chunk);
 }
 
 // Or get complete output
@@ -31,8 +29,6 @@ const fullOutput = await stream.getFullOutput();
 ```
 
 ## Properties
-
-
 
 ### Streaming properties
 
@@ -45,32 +41,8 @@ const fullOutput = await stream.getFullOutput();
   })}
 />
 
-{/* <PropertiesTable
-  content={[
-    {
-      name: "fullStream",
-      type: "ReadableStream<ChunkType<TObjectSchema>>",
-      description: "Raw stream of all chunks. Provides complete control over stream processing."
-    },
-    {
-      name: "textStream",
-      type: "ReadableStream<string>",
-      description: "Stream of only text content, filtering out metadata and other chunk types."
-    },
-    {
-      name: "objectStream",
-      type: "ReadableStream<TObjectSchema>",
-      description: "Stream of structured output objects when using an output schema. Emits partial objects as they're built."
-    },
-    {
-      name: "elementStream",
-      type: "ReadableStream<any>",
-      description: "Stream of individual array elements when output schema is an array type."
-    }
-  ]}
-/> */}
-
 ### Promise-based properties
+
 <TSDocPropertiesTable 
   filter={(content) => [
     "text", 
@@ -90,103 +62,23 @@ const fullOutput = await stream.getFullOutput();
   })}
 />
 
-{/* <PropertiesTable
+## Methods
+<PropertiesTable
   content={[
-    {
-      name: "text",
-      type: "Promise<string>",
-      description: "Resolves to the complete text response after streaming completes."
+     {
+      name: "getFullOutput",
+      type: `Promise<FullOutput>`,
+      description: "Returns complete output including text, usage, tool calls, and all metadata."
     },
     {
-      name: "usage",
-      type: "Promise<Record<string, number>>",
-      description: "Resolves to token usage statistics including inputTokens, outputTokens, and totalTokens."
-    },
-    {
-      name: "reasoning",
-      type: "Promise<string>",
-      description: "Resolves to complete reasoning text for models that support reasoning mode."
-    },
-    {
-      name: "reasoningText",
-      type: "Promise<string | undefined>",
-      description: "Same as reasoning but resolves to undefined if no reasoning was generated."
-    },
-    {
-      name: "toolCalls",
-      type: "Promise<any[]>",
-      description: "Resolves to array of all tool calls made during execution."
-    },
-    {
-      name: "toolResults",
-      type: "Promise<any[]>",
-      description: "Resolves to array of all tool execution results."
-    },
-    {
-      name: "object",
-      type: "Promise<TObjectSchema>",
-      description: "Resolves to the complete structured output object when using an output schema."
-    },
-    {
-      name: "finishReason",
-      type: "Promise<string | undefined>",
-      description: "Resolves to the reason generation finished: 'stop', 'length', 'tool-calls', 'error', or 'other'."
-    },
-    {
-      name: "error",
-      type: "Error | undefined",
-      description: "Error object if an error occurred during streaming."
+      name: "consumeStream",
+      type: `(options?: {
+        onError?: (error: Error) => void;
+      }) => Promise<void>`,
+      description: "Manually consume the entire stream with optional error handling."
     }
   ]}
-/> */}
-
-## Methods
-{/* 
-<TSDocPropertiesTable 
-  filter={(content) => ["getFullOutput", "consumeStream"].includes(content.name)}
-  definition={generateDefinition({
-    code: `import type { MastraModelOutput } from '@mastra/core'
-    export default MastraModelOutput
-    `
-  })}
-/> */}
-
-{/* ### getFullOutput() */}
-
-<TSDocPropertiesTable 
-  filter={(content) => ["getFullOutput"].includes(content.name)}
-  definition={generateDefinition({
-    code: `import type { MastraModelOutput } from '@mastra/core'
-    export default MastraModelOutput
-    `
-  })}
 />
-Consumes the entire stream and returns the final output data.
-
-```typescript
-const fullOutput = await stream.getFullOutput();
-```
-
-Returns complete output including text, usage, tool calls, and all metadata. See [stream methods](#stream-methods) in the streamVNext documentation for details.
-
-### consumeStream()
-<TSDocPropertiesTable 
-  filter={(content) => ["consumeStream"].includes(content.name)}
-  definition={generateDefinition({
-    code: `import type { MastraModelOutput } from '@mastra/core'
-    export default MastraModelOutput
-    `
-  })}
-/>
-Manually consume the stream with optional error handling.
-
-```typescript
-await stream.consumeStream({
-  onError: (error) => {
-    console.error('Stream error:', error);
-  }
-});
-```
 
 ## Usage examples
 
@@ -197,11 +89,11 @@ const stream = await agent.streamVNext("Tell me a story");
 
 // Stream text in real-time
 for await (const text of stream.textStream) {
-  process.stdout.write(text);
+  console.log(text);
 }
 ```
 
-### Structured output streaming
+### JSON object streaming
 
 ```typescript
 import { z } from 'zod';
@@ -217,18 +109,18 @@ const stream = await agent.streamVNext("Extract user info", {
 });
 
 // Stream partial objects as they're built
-for await (const partialObject of stream.objectStream) {
-  console.log('Building:', partialObject);
+for await (const json of stream.objectStream) {
+  console.log(json);
   // { name: "John" }
   // { name: "John", age: 30 }
   // { name: "John", age: 30, city: "NYC" }
 }
 
-// Or wait for complete object
+// Or wait for complete object to be resolved and validated
 const completeObject = await stream.object;
 ```
 
-### Processing all chunks
+### Processing all chunks 
 
 ```typescript
 const stream = await agent.streamVNext("Complex task");
@@ -268,37 +160,7 @@ console.log(`Tokens used: ${usage.totalTokens}`);
 console.log(`Tools called: ${toolCalls.length}`);
 ```
 
-### Error handling
-
-```typescript
-const stream = await agent.streamVNext("Task");
-
-try {
-  const fullOutput = await stream.getFullOutput();
-  
-  if (fullOutput.tripwire) {
-    console.warn('Content blocked:', fullOutput.tripwireReason);
-    return;
-  }
-  
-  console.log(fullOutput.text);
-} catch (error) {
-  console.error('Stream failed:', error);
-}
-```
-
-## Internal behavior
-
-<Callout type="info">
-  The `MastraModelOutput` class automatically handles:
-  - Buffering of text, tool calls, and other data
-  - Usage statistics aggregation across steps
-  - Output processor execution if configured
-  - Tripwire detection for content moderation
-  - Lazy stream consumption (streams only start when accessed)
-</Callout>
-
 ## Related types
 
-- [ChunkType](/reference/agents/ChunkType) - Types of chunks emitted in the stream
+- [ChunkType](/reference/agents/streamVNextTypes/ChunkType) - Types of chunks emitted in the stream
 - [Agent.streamVNext()](/reference/agents/streamVNext) - Method that returns this stream interface

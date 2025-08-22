@@ -4,8 +4,6 @@ description: "Documentation for the `Agent.streamVNext()` method in Mastra agent
 ---
 
 import { Callout } from "nextra/components";
-import { generateDefinition } from 'nextra/tsdoc';
-import { TSDocPropertiesTable } from "@/components/tsdoc-properties-table";
 
 # Agent.streamVNext() (Experimental)
 
@@ -33,7 +31,7 @@ const aiSdkStream = await agent.streamVNext("message for agent", {
   content={[
     {
       name: "messages",
-      type: "string | string[] | CoreMessage[] | AiMessageType[] | UIMessageWithMetadata[]",
+      type: "string | string[] | MessageInput[] | CoreMessage[] | AiMessageType[] | UIMessageWithMetadata[]",
       description: "The messages to send to the agent. Can be a single string, array of strings, or structured message objects.",
     },
     {
@@ -47,15 +45,8 @@ const aiSdkStream = await agent.streamVNext("message for agent", {
 
 ### Options parameters
 
-<TSDocPropertiesTable 
-  definition={generateDefinition({
-    code: `import type { AgentExecutionOptions } from '@mastra/core/agent'
-    export default AgentExecutionOptions
-    `
-  })}
-/>
 
-{/* <PropertiesTable
+<PropertiesTable
   content={[
     {
       name: "format",
@@ -201,8 +192,8 @@ const aiSdkStream = await agent.streamVNext("message for agent", {
       name: "memoryOptions",
       type: "MemoryConfig",
       isOptional: true,
-      description:
-        "**Deprecated.** Use `memory.options` instead. Configuration options for memory management.",
+      deprecated:
+        "Use `memory.options` instead. Configuration options for memory management.",
     },
     {
       name: "onFinish",
@@ -222,8 +213,8 @@ const aiSdkStream = await agent.streamVNext("message for agent", {
       name: "resourceId",
       type: "string",
       isOptional: true,
-      description:
-        "**Deprecated.** Use `memory.resource` instead. Identifier for the user or resource interacting with the agent. Must be provided if threadId is provided.",
+      deprecated:
+        "Use `memory.resource` instead. Identifier for the user or resource interacting with the agent. Must be provided if threadId is provided.",
     },
     {
       name: "telemetry",
@@ -343,8 +334,8 @@ const aiSdkStream = await agent.streamVNext("message for agent", {
       name: "threadId",
       type: "string",
       isOptional: true,
-      description:
-        "**Deprecated.** Use `memory.thread` instead. Identifier for the conversation thread. Allows for maintaining context across multiple interactions. Must be provided if resourceId is provided.",
+      deprecated:
+        "Use `memory.thread` instead. Identifier for the conversation thread. Allows for maintaining context across multiple interactions. Must be provided if resourceId is provided.",
     },
     {
       name: "toolChoice",
@@ -474,67 +465,56 @@ const aiSdkStream = await agent.streamVNext("message for agent", {
       description: "Additional HTTP headers to be sent with the request. Only applicable for HTTP-based providers.",
     }
   ]}
-/> */}
-
-{/* ### TSDoc Test - AgentExecutionOptions
-
-<TSDocPropertiesTable 
-  code={`
-import type { AgentExecutionOptions } from '@mastra/core/agent'
-export default AgentExecutionOptions
-  `}
-/> */}
+/>
 
 ## Returns
 
 <PropertiesTable
   content={[
     {
-      name: "MastraModelOutput<Output>",
-      type: "Streaming interface",
-      description: "Returned when format is 'mastra' or undefined. Mastra's native streaming interface with comprehensive access to all stream data and methods."
-      
+      name: "stream",
+      type: "MastraModelOutput<Output> | AISDKV5OutputStream<Output>",
+      description: "Returns a streaming interface based on the format parameter. When format is 'mastra' (default), returns MastraModelOutput. When format is 'aisdk', returns AISDKV5OutputStream for AI SDK v5 compatibility.",
     },
-    {
-      name: "AISDKV5OutputStream<Output>",
-      type: "Streaming interface", 
-      description: "Returned when format is 'aisdk'. Compatible with AI SDK v5 interfaces like useChat, providing methods like toUIMessageStreamResponse() and toTextStreamResponse()."
-    }
   ]}
 />
-
-The return type depends on the `format` parameter:
-- **`'mastra'` (default)**: Returns [`MastraModelOutput<Output>`](./streamVNextTypes/MastraModelOutput)
-- **`'aisdk'`**: Returns [`AISDKV5OutputStream<Output>`](./streamVNextTypes/AISDKV5OutputStream)
 
 ## Stream interfaces
 
 The stream object returned provides different interfaces based on the format:
 
-### MastraModelOutput (format: 'mastra')
+### MastraModelOutput
 
-The default format returns a [`MastraModelOutput`](./streamVNextTypes/MastraModelOutput) object with comprehensive streaming capabilities:
+The default 'mastra' format returns a [`MastraModelOutput`](./streamVNextTypes/MastraModelOutput)
+
 
 ```typescript
 const stream = await agent.streamVNext("Hello");
-// stream is MastraModelOutput<Output>
 
-// Access different streams
-for await (const text of stream.textStream) {
-  console.log(text);
+// Stream in Mastra format
+for await (const chunk of stream.fullStream) {
+  if (chunk.type === 'text-delta') {
+    console.log(chunk.payload.text);
+  }
 }
 
 // Get complete output
 const fullOutput = await stream.getFullOutput();
 ```
 
-### AISDKV5OutputStream (format: 'aisdk')
+### AISDKV5OutputStream
 
-The AI SDK format returns an [`AISDKV5OutputStream`](./streamVNextTypes/AISDKV5OutputStream) object optimized for frontend integration:
+The 'aisdk' format returns an [`AISDKV5OutputStream`](./streamVNextTypes/AISDKV5OutputStream)
 
 ```typescript
 const stream = await agent.streamVNext("Hello", { format: 'aisdk' });
-// stream is AISDKV5OutputStream<Output>
+
+// Stream in AI SDK v5 format
+for await (const chunk of stream.fullStream) {
+  if (chunk.type === 'text-delta') {
+    console.log(chunk.text);
+  }
+}
 
 // Use with frontend frameworks
 return stream.toUIMessageStreamResponse();
@@ -548,7 +528,7 @@ Both stream types share these promise-based accessors:
 - `stream.reasoning` - Reasoning text (if supported)
 - `stream.toolCalls` - Array of tool calls made
 - `stream.toolResults` - Array of tool results
-- `stream.object` - Structured output object
+- `stream.object` - JSON object validated against the provided 'output' schema
 
 ## Stream types reference
 

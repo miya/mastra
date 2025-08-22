@@ -4,6 +4,8 @@ description: "Documentation for the ChunkType type used in Mastra streaming resp
 ---
 
 import { Callout } from "nextra/components";
+import { TSDocPropertiesTable } from "@/components/tsdoc-properties-table";
+import { generateDefinition } from "nextra/tsdoc";
 
 # ChunkType
 
@@ -11,27 +13,7 @@ import { Callout } from "nextra/components";
   **Experimental API**: This type is part of the experimental [`streamVNext()`](../streamVNext) method. The API may change as we refine the feature based on feedback.
 </Callout>
 
-The `ChunkType` type defines all possible chunk types that can be emitted during streaming responses from agents and workflows. Each chunk represents a discrete piece of information in the stream.
-
-## Type definition
-
-```typescript
-type ChunkType<TObjectSchema = unknown> = BaseChunkType & (
-  | { type: 'response-metadata'; payload: ResponseMetadataPayload }
-  | { type: 'text-start'; payload: TextStartPayload }
-  | { type: 'text-delta'; payload: TextDeltaPayload }
-  | { type: 'text-end'; payload: TextEndPayload }
-  | { type: 'reasoning-start'; payload: ReasoningStartPayload }
-  | { type: 'reasoning-delta'; payload: ReasoningDeltaPayload }
-  | { type: 'reasoning-end'; payload: ReasoningEndPayload }
-  | { type: 'tool-call'; payload: ToolCallPayload }
-  | { type: 'tool-result'; payload: ToolResultPayload }
-  | { type: 'finish'; payload: FinishPayload }
-  | { type: 'error'; payload: ErrorPayload }
-  | { type: 'object'; object: TObjectSchema }
-  // ... and more
-)
-```
+The `ChunkType` type defines the mastra format of stream chunks that can be emitted during streaming responses from agents.
 
 ## Base properties
 
@@ -46,11 +28,30 @@ All chunks include these base properties:
     },
     {
       name: "from",
-      type: "ChunkFrom",
-      description: "Source of the chunk: 'AGENT', 'USER', 'SYSTEM', or 'WORKFLOW'"
+      type: "'AGENT' | 'USER' | 'SYSTEM' | 'WORKFLOW'",
+      description: "Source of the chunk"
     }
   ]}
 />
+
+## Type definition
+```typescript
+type ChunkType<OUTPUT = unknown> = BaseChunkType & (
+  | { type: 'response-metadata'; payload: ResponseMetadataPayload }
+  | { type: 'text-start'; payload: TextStartPayload }
+  | { type: 'text-delta'; payload: TextDeltaPayload }
+  | { type: 'text-end'; payload: TextEndPayload }
+  | { type: 'reasoning-start'; payload: ReasoningStartPayload }
+  | { type: 'reasoning-delta'; payload: ReasoningDeltaPayload }
+  | { type: 'reasoning-end'; payload: ReasoningEndPayload }
+  | { type: 'tool-call'; payload: ToolCallPayload }
+  | { type: 'tool-result'; payload: ToolResultPayload }
+  | { type: 'finish'; payload: FinishPayload }
+  | { type: 'error'; payload: ErrorPayload }
+  | { type: 'object'; object: OUTPUT }
+  // ... and more
+)
+```
 
 ## Common chunk types
 
@@ -125,7 +126,7 @@ Partial structured output object (when using output schemas).
 ```typescript
 {
   type: 'object',
-  object: Partial<TObjectSchema>
+  object: Partial<OUTPUT>
 }
 ```
 
@@ -201,20 +202,7 @@ for await (const chunk of stream.fullStream) {
 }
 ```
 
-## ChunkFrom enum
-
-Identifies the source of a chunk:
-
-```typescript
-enum ChunkFrom {
-  AGENT = 'AGENT',     // From an agent
-  USER = 'USER',       // From user input
-  SYSTEM = 'SYSTEM',   // From system
-  WORKFLOW = 'WORKFLOW' // From a workflow
-}
-```
-
 ## Related types
 
-- [MastraModelOutput](/reference/agents/MastraModelOutput) - The stream object that emits these chunks
+- [MastraModelOutput](/reference/agents/streamVNextTypes/MastraModelOutput) - The stream object that emits these chunks
 - [Agent.streamVNext()](/reference/agents/streamVNext) - Method that returns streams emitting these chunks
