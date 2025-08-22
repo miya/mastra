@@ -1,13 +1,13 @@
 import { ReadableStream } from 'stream/web';
 import type { ToolSet } from 'ai-v5';
 import z from 'zod';
+import type { OutputSchema } from '../../stream/base/schema';
 import type { ChunkType } from '../../stream/types';
 import { ChunkFrom } from '../../stream/types';
 import { createWorkflow } from '../../workflows';
 import type { LoopRun } from '../types';
 import { createOuterLLMWorkflow } from './outer-llm-step';
 import { llmIterationOutputSchema } from './schema';
-import type { OutputSchema } from '../../stream/base/schema';
 
 export function workflowLoopStream<
   Tools extends ToolSet = ToolSet,

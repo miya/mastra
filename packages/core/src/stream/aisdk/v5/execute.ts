@@ -2,7 +2,8 @@ import { isAbortError } from '@ai-sdk/provider-utils';
 import type { LanguageModelV2, LanguageModelV2Prompt, SharedV2ProviderOptions } from '@ai-sdk/provider-v5';
 import type { Span } from '@opentelemetry/api';
 import type { CallSettings, TelemetrySettings, ToolChoice, ToolSet } from 'ai-v5';
-import { getResponseFormat, type OutputSchema } from '../../base/schema';
+import { getResponseFormat } from '../../base/schema';
+import type { OutputSchema } from '../../base/schema';
 import { prepareToolsAndToolChoice } from './compat';
 import { AISDKV5InputStream } from './input';
 

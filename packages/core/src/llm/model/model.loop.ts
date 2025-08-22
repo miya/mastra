@@ -21,10 +21,10 @@ import { loop } from '../../loop';
 import type { LoopOptions } from '../../loop/types';
 import type { Mastra } from '../../mastra';
 import type { MastraModelOutput } from '../../stream/base/output';
+import type { OutputSchema } from '../../stream/base/schema';
 import { delay } from '../../utils';
 
 import type { ModelLoopStreamArgs } from './model.loop.types';
-import type { OutputSchema } from '../../stream/base/schema';
 
 export class MastraLLMVNext extends MastraBase {
   #model: LanguageModelV2;

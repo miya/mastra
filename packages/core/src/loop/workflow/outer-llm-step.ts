@@ -1,6 +1,7 @@
 import type { ToolSet } from 'ai-v5';
 import z from 'zod';
 import { convertMastraChunkToAISDKv5 } from '../../stream/aisdk/v5/transform';
+import type { OutputSchema } from '../../stream/base/schema';
 import type { ChunkType } from '../../stream/types';
 import { ChunkFrom } from '../../stream/types';
 import { createStep, createWorkflow } from '../../workflows';
@@ -8,7 +9,6 @@ import type { OuterLLMRun } from '../types';
 import { createLLMExecutionStep } from './llm-execution';
 import { llmIterationOutputSchema, toolCallOutputSchema } from './schema';
 import { createToolCallStep } from './tool-call-step';
-import type { OutputSchema } from '../../stream/base/schema';
 
 export function createOuterLLMWorkflow<
   Tools extends ToolSet = ToolSet,

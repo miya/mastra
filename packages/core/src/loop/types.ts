@@ -1,12 +1,12 @@
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider-v5';
 import type { Span } from '@opentelemetry/api';
-import type { asSchema, CallSettings, IdGenerator, StopCondition, TelemetrySettings, ToolChoice, ToolSet } from 'ai-v5';
+import type { CallSettings, IdGenerator, StopCondition, TelemetrySettings, ToolChoice, ToolSet } from 'ai-v5';
 import type { MessageList } from '../agent/message-list';
 import type { IMastraLogger } from '../logger';
 import type { OutputProcessor } from '../processors';
+import type { OutputSchema } from '../stream/base/schema';
 import type { ChunkType } from '../stream/types';
 import type { MastraIdGenerator } from '../types';
-import type { OutputSchema } from '../stream/base/schema';
 
 export type StreamInternal = {
   now?: () => number;

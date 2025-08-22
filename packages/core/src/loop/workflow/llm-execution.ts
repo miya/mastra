@@ -7,13 +7,13 @@ import { execute } from '../../stream/aisdk/v5/execute';
 import { DefaultStepResult } from '../../stream/aisdk/v5/output-helpers';
 import { convertMastraChunkToAISDKv5 } from '../../stream/aisdk/v5/transform';
 import { MastraModelOutput } from '../../stream/base/output';
+import type { OutputSchema } from '../../stream/base/schema';
 import type { ChunkType, ReasoningStartPayload, TextStartPayload } from '../../stream/types';
 import { ChunkFrom } from '../../stream/types';
 import { createStep } from '../../workflows';
 import type { LoopConfig, OuterLLMRun } from '../types';
 import { AgenticRunState } from './run-state';
 import { llmIterationOutputSchema } from './schema';
-import type { OutputSchema } from '../../stream/base/schema';
 
 type ProcessOutputStreamOptions<OUTPUT extends OutputSchema | undefined = undefined> = {
   model: LanguageModelV2;

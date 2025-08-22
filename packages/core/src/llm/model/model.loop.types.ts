@@ -12,8 +12,8 @@ import type { z, ZodSchema } from 'zod';
 import type { LoopOptions } from '../../loop/types';
 import type { StructuredOutputOptions, OutputProcessor } from '../../processors';
 import type { RuntimeContext } from '../../runtime-context';
-import type { inferOutput } from './shared.types';
 import type { OutputSchema } from '../../stream/base/schema';
+import type { inferOutput } from './shared.types';
 
 export type OriginalStreamTextOptions<
   TOOLS extends ToolSet,
