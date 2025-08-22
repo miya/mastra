@@ -20,3 +20,4 @@ export * from './workflows/index.warning';
 export * from './hooks';
 export type { MastraModelOutput } from './stream/base/output';
 export type { AISDKV5OutputStream } from './stream/aisdk/v5/output';
+export type { OutputSchema } from './stream/base/schema';

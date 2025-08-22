@@ -1,29 +1,9 @@
 "use client";
 import React from "react";
 import { T } from "gt-next/client";
+import { ContentItem, Property } from "./properties-table-types";
 
-interface Parameter {
-  name: string;
-  type: string;
-  isOptional?: boolean;
-  description: string;
-}
-
-interface Property {
-  type: string;
-  parameters: Parameter[];
-}
-
-interface ContentItem {
-  name: string;
-  type: string;
-  isOptional?: boolean;
-  description: string;
-  properties?: Property[];
-  defaultValue?: string;
-}
-
-interface PropertiesTableProps {
+export interface PropertiesTableProps {
   content?: ContentItem[];
 }
 

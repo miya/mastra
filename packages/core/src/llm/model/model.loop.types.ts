@@ -13,6 +13,7 @@ import type { LoopOptions } from '../../loop/types';
 import type { StructuredOutputOptions, OutputProcessor } from '../../processors';
 import type { RuntimeContext } from '../../runtime-context';
 import type { inferOutput } from './shared.types';
+import type { OutputSchema } from '../../stream/base/schema';
 
 export type OriginalStreamTextOptions<
   TOOLS extends ToolSet,
@@ -32,15 +33,14 @@ export type StreamTextOnStepFinishCallback<Tools extends ToolSet> = (
 ) => Promise<void> | void;
 
 export type ModelLoopStreamArgs<
-  Tools extends ToolSet,
-  Output extends ZodSchema | JSONSchema7 | undefined = undefined,
+  TOOLS extends ToolSet,
+  OUTPUT extends OutputSchema | undefined = undefined,
   STRUCTURED_OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
 > = {
   messages: UIMessage[] | ModelMessage[];
-  output?: Output;
   structuredOutput?: STRUCTURED_OUTPUT extends z.ZodTypeAny ? StructuredOutputOptions<STRUCTURED_OUTPUT> : never;
   outputProcessors?: OutputProcessor[];
   runtimeContext: RuntimeContext;
   resourceId?: string;
   threadId?: string;
-} & Omit<LoopOptions<Tools>, 'model' | 'messageList'>;
+} & Omit<LoopOptions<TOOLS, OUTPUT>, 'model' | 'messageList'>;

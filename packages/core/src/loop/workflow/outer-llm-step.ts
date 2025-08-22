@@ -8,14 +8,12 @@ import type { OuterLLMRun } from '../types';
 import { createLLMExecutionStep } from './llm-execution';
 import { llmIterationOutputSchema, toolCallOutputSchema } from './schema';
 import { createToolCallStep } from './tool-call-step';
+import type { OutputSchema } from '../../stream/base/schema';
 
-export function createOuterLLMWorkflow<Tools extends ToolSet = ToolSet>({
-  model,
-  telemetry_settings,
-  _internal,
-  modelStreamSpan,
-  ...rest
-}: OuterLLMRun<Tools>) {
+export function createOuterLLMWorkflow<
+  Tools extends ToolSet = ToolSet,
+  OUTPUT extends OutputSchema | undefined = undefined,
+>({ model, telemetry_settings, _internal, modelStreamSpan, ...rest }: OuterLLMRun<Tools, OUTPUT>) {
   const llmExecutionStep = createLLMExecutionStep({
     model,
     _internal,

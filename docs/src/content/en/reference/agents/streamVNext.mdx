@@ -4,6 +4,8 @@ description: "Documentation for the `Agent.streamVNext()` method in Mastra agent
 ---
 
 import { Callout } from "nextra/components";
+import { generateDefinition } from 'nextra/tsdoc';
+import { TSDocPropertiesTable } from "@/components/tsdoc-properties-table";
 
 # Agent.streamVNext() (Experimental)
 
@@ -45,7 +47,15 @@ const aiSdkStream = await agent.streamVNext("message for agent", {
 
 ### Options parameters
 
-<PropertiesTable
+<TSDocPropertiesTable 
+  definition={generateDefinition({
+    code: `import type { AgentExecutionOptions } from '@mastra/core/agent'
+    export default AgentExecutionOptions
+    `
+  })}
+/>
+
+{/* <PropertiesTable
   content={[
     {
       name: "format",
@@ -464,19 +474,89 @@ const aiSdkStream = await agent.streamVNext("message for agent", {
       description: "Additional HTTP headers to be sent with the request. Only applicable for HTTP-based providers.",
     }
   ]}
-/>
+/> */}
+
+{/* ### TSDoc Test - AgentExecutionOptions
+
+<TSDocPropertiesTable 
+  code={`
+import type { AgentExecutionOptions } from '@mastra/core/agent'
+export default AgentExecutionOptions
+  `}
+/> */}
 
 ## Returns
 
 <PropertiesTable
   content={[
     {
-      name: "stream",
-      type: "MastraModelOutput<Output> | AISDKV5OutputStream<Output>",
-      description: "Returns a streaming interface based on the format parameter. When format is 'mastra' (default), returns MastraModelOutput. When format is 'aisdk', returns AISDKV5OutputStream for AI SDK v5 compatibility.",
+      name: "MastraModelOutput<Output>",
+      type: "Streaming interface",
+      description: "Returned when format is 'mastra' or undefined. Mastra's native streaming interface with comprehensive access to all stream data and methods."
+      
     },
+    {
+      name: "AISDKV5OutputStream<Output>",
+      type: "Streaming interface", 
+      description: "Returned when format is 'aisdk'. Compatible with AI SDK v5 interfaces like useChat, providing methods like toUIMessageStreamResponse() and toTextStreamResponse()."
+    }
   ]}
 />
+
+The return type depends on the `format` parameter:
+- **`'mastra'` (default)**: Returns [`MastraModelOutput<Output>`](./streamVNextTypes/MastraModelOutput)
+- **`'aisdk'`**: Returns [`AISDKV5OutputStream<Output>`](./streamVNextTypes/AISDKV5OutputStream)
+
+## Stream interfaces
+
+The stream object returned provides different interfaces based on the format:
+
+### MastraModelOutput (format: 'mastra')
+
+The default format returns a [`MastraModelOutput`](./streamVNextTypes/MastraModelOutput) object with comprehensive streaming capabilities:
+
+```typescript
+const stream = await agent.streamVNext("Hello");
+// stream is MastraModelOutput<Output>
+
+// Access different streams
+for await (const text of stream.textStream) {
+  console.log(text);
+}
+
+// Get complete output
+const fullOutput = await stream.getFullOutput();
+```
+
+### AISDKV5OutputStream (format: 'aisdk')
+
+The AI SDK format returns an [`AISDKV5OutputStream`](./streamVNextTypes/AISDKV5OutputStream) object optimized for frontend integration:
+
+```typescript
+const stream = await agent.streamVNext("Hello", { format: 'aisdk' });
+// stream is AISDKV5OutputStream<Output>
+
+// Use with frontend frameworks
+return stream.toUIMessageStreamResponse();
+```
+
+### Common properties
+
+Both stream types share these promise-based accessors:
+- `stream.text` - Complete text response
+- `stream.usage` - Token usage statistics  
+- `stream.reasoning` - Reasoning text (if supported)
+- `stream.toolCalls` - Array of tool calls made
+- `stream.toolResults` - Array of tool results
+- `stream.object` - Structured output object
+
+## Stream types reference
+
+For detailed information about the stream interfaces and chunk types:
+
+- [MastraModelOutput](./streamVNextTypes/MastraModelOutput) - Complete reference for the Mastra format stream
+- [AISDKV5OutputStream](./streamVNextTypes/AISDKV5OutputStream) - Complete reference for the AI SDK format stream  
+- [ChunkType](./streamVNextTypes/ChunkType) - All possible chunk types emitted during streaming
 
 ## Extended usage example
 
@@ -536,13 +616,10 @@ await agent.streamVNext("message for agent", {
   stopWhen: stepCountIs(3), // Stop after 3 steps
   modelSettings: {
     temperature: 0.7,
-  modelSettings: {
-    temperature: 0.7,
   },
   memory: {
     thread: "user-123",
     resource: "test-app"
-  },
   },
   toolChoice: "auto",
   // Structured output with better DX

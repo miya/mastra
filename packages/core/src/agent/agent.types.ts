@@ -10,9 +10,10 @@ import type { MastraScorers } from '../scores';
 import type { ChunkType } from '../stream/types';
 import type { MessageListInput } from './message-list';
 import type { AgentMemoryOption, ToolsetsInput, ToolsInput, StructuredOutputOptions } from './types';
+import type { OutputSchema } from '../stream/base/schema';
 
 export type AgentExecutionOptions<
-  OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
+  OUTPUT extends OutputSchema | undefined = undefined,
   STRUCTURED_OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
   FORMAT extends 'mastra' | 'aisdk' | undefined = undefined,
 > = {
@@ -85,7 +86,10 @@ export type AgentExecutionOptions<
   returnScorerData?: boolean;
 };
 
-export type InnerAgentExecutionOptions = AgentExecutionOptions & {
+export type InnerAgentExecutionOptions<
+  OUTPUT extends OutputSchema | undefined = undefined,
+  FORMAT extends 'aisdk' | 'mastra' | undefined = undefined,
+> = AgentExecutionOptions<OUTPUT, any, FORMAT> & {
   writableStream?: WritableStream<ChunkType>;
   messages: MessageListInput;
 };

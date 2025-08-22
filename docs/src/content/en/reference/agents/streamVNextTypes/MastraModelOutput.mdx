@@ -1,0 +1,304 @@
+---
+title: "Reference: MastraModelOutput | Agents | Mastra Docs"
+description: "Documentation for the MastraModelOutput class, the streaming interface returned by agent.streamVNext() in Mastra format."
+---
+
+import { Callout } from "nextra/components";
+import { generateDefinition } from "nextra/tsdoc";
+import { TSDocPropertiesTable } from "@/components/tsdoc-properties-table";
+
+# MastraModelOutput
+
+<Callout type="warning">
+  **Experimental API**: This type is part of the experimental [`streamVNext()`](../streamVNext) method. The API may change as we refine the feature based on feedback.
+</Callout>
+
+The `MastraModelOutput` class is the streaming interface returned by [`agent.streamVNext()`](../streamVNext) when using the default Mastra format (or when `format` parameter is not specified). It provides multiple ways to consume and process streaming responses from agents.
+
+```typescript
+// Returns MastraModelOutput
+const stream = await agent.streamVNext("Hello");
+// or explicitly
+const stream = await agent.streamVNext("Hello", { format: 'mastra' });
+
+// Access different streaming capabilities
+for await (const text of stream.textStream) {
+  console.log(text);
+}
+
+// Or get complete output
+const fullOutput = await stream.getFullOutput();
+```
+
+## Properties
+
+
+
+### Streaming properties
+
+<TSDocPropertiesTable 
+  filter={(content) => ["fullStream", "textStream", "objectStream", "elementStream"].includes(content.name)}
+  definition={generateDefinition({
+    code: `import type { MastraModelOutput } from '@mastra/core'
+    export default MastraModelOutput
+    `
+  })}
+/>
+
+{/* <PropertiesTable
+  content={[
+    {
+      name: "fullStream",
+      type: "ReadableStream<ChunkType<TObjectSchema>>",
+      description: "Raw stream of all chunks. Provides complete control over stream processing."
+    },
+    {
+      name: "textStream",
+      type: "ReadableStream<string>",
+      description: "Stream of only text content, filtering out metadata and other chunk types."
+    },
+    {
+      name: "objectStream",
+      type: "ReadableStream<TObjectSchema>",
+      description: "Stream of structured output objects when using an output schema. Emits partial objects as they're built."
+    },
+    {
+      name: "elementStream",
+      type: "ReadableStream<any>",
+      description: "Stream of individual array elements when output schema is an array type."
+    }
+  ]}
+/> */}
+
+### Promise-based properties
+<TSDocPropertiesTable 
+  filter={(content) => [
+    "text", 
+    "usage", 
+    "reasoning", 
+    "reasoningText", 
+    "toolCalls", 
+    "toolResults", 
+    "object", 
+    "finishReason", 
+    "error"
+    ].includes(content.name)}
+  definition={generateDefinition({
+    code: `import type { MastraModelOutput } from '@mastra/core'
+    export default MastraModelOutput
+    `
+  })}
+/>
+
+{/* <PropertiesTable
+  content={[
+    {
+      name: "text",
+      type: "Promise<string>",
+      description: "Resolves to the complete text response after streaming completes."
+    },
+    {
+      name: "usage",
+      type: "Promise<Record<string, number>>",
+      description: "Resolves to token usage statistics including inputTokens, outputTokens, and totalTokens."
+    },
+    {
+      name: "reasoning",
+      type: "Promise<string>",
+      description: "Resolves to complete reasoning text for models that support reasoning mode."
+    },
+    {
+      name: "reasoningText",
+      type: "Promise<string | undefined>",
+      description: "Same as reasoning but resolves to undefined if no reasoning was generated."
+    },
+    {
+      name: "toolCalls",
+      type: "Promise<any[]>",
+      description: "Resolves to array of all tool calls made during execution."
+    },
+    {
+      name: "toolResults",
+      type: "Promise<any[]>",
+      description: "Resolves to array of all tool execution results."
+    },
+    {
+      name: "object",
+      type: "Promise<TObjectSchema>",
+      description: "Resolves to the complete structured output object when using an output schema."
+    },
+    {
+      name: "finishReason",
+      type: "Promise<string | undefined>",
+      description: "Resolves to the reason generation finished: 'stop', 'length', 'tool-calls', 'error', or 'other'."
+    },
+    {
+      name: "error",
+      type: "Error | undefined",
+      description: "Error object if an error occurred during streaming."
+    }
+  ]}
+/> */}
+
+## Methods
+{/* 
+<TSDocPropertiesTable 
+  filter={(content) => ["getFullOutput", "consumeStream"].includes(content.name)}
+  definition={generateDefinition({
+    code: `import type { MastraModelOutput } from '@mastra/core'
+    export default MastraModelOutput
+    `
+  })}
+/> */}
+
+{/* ### getFullOutput() */}
+
+<TSDocPropertiesTable 
+  filter={(content) => ["getFullOutput"].includes(content.name)}
+  definition={generateDefinition({
+    code: `import type { MastraModelOutput } from '@mastra/core'
+    export default MastraModelOutput
+    `
+  })}
+/>
+Consumes the entire stream and returns the final output data.
+
+```typescript
+const fullOutput = await stream.getFullOutput();
+```
+
+Returns complete output including text, usage, tool calls, and all metadata. See [stream methods](#stream-methods) in the streamVNext documentation for details.
+
+### consumeStream()
+<TSDocPropertiesTable 
+  filter={(content) => ["consumeStream"].includes(content.name)}
+  definition={generateDefinition({
+    code: `import type { MastraModelOutput } from '@mastra/core'
+    export default MastraModelOutput
+    `
+  })}
+/>
+Manually consume the stream with optional error handling.
+
+```typescript
+await stream.consumeStream({
+  onError: (error) => {
+    console.error('Stream error:', error);
+  }
+});
+```
+
+## Usage examples
+
+### Real-time text streaming
+
+```typescript
+const stream = await agent.streamVNext("Tell me a story");
+
+// Stream text in real-time
+for await (const text of stream.textStream) {
+  process.stdout.write(text);
+}
+```
+
+### Structured output streaming
+
+```typescript
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string(),
+  age: z.number(),
+  city: z.string()
+});
+
+const stream = await agent.streamVNext("Extract user info", {
+  output: schema
+});
+
+// Stream partial objects as they're built
+for await (const partialObject of stream.objectStream) {
+  console.log('Building:', partialObject);
+  // { name: "John" }
+  // { name: "John", age: 30 }
+  // { name: "John", age: 30, city: "NYC" }
+}
+
+// Or wait for complete object
+const completeObject = await stream.object;
+```
+
+### Processing all chunks
+
+```typescript
+const stream = await agent.streamVNext("Complex task");
+
+for await (const chunk of stream.fullStream) {
+  switch (chunk.type) {
+    case 'text-delta':
+      handleText(chunk.payload.text);
+      break;
+    case 'tool-call':
+      handleToolCall(chunk.payload);
+      break;
+    case 'reasoning-delta':
+      handleReasoning(chunk.payload.text);
+      break;
+    case 'finish':
+      handleCompletion(chunk.payload);
+      break;
+  }
+}
+```
+
+### Promise-based access
+
+```typescript
+const stream = await agent.streamVNext("Analyze this");
+
+// Access individual promises
+const [text, usage, toolCalls] = await Promise.all([
+  stream.text,
+  stream.usage,
+  stream.toolCalls
+]);
+
+console.log(`Response: ${text}`);
+console.log(`Tokens used: ${usage.totalTokens}`);
+console.log(`Tools called: ${toolCalls.length}`);
+```
+
+### Error handling
+
+```typescript
+const stream = await agent.streamVNext("Task");
+
+try {
+  const fullOutput = await stream.getFullOutput();
+  
+  if (fullOutput.tripwire) {
+    console.warn('Content blocked:', fullOutput.tripwireReason);
+    return;
+  }
+  
+  console.log(fullOutput.text);
+} catch (error) {
+  console.error('Stream failed:', error);
+}
+```
+
+## Internal behavior
+
+<Callout type="info">
+  The `MastraModelOutput` class automatically handles:
+  - Buffering of text, tool calls, and other data
+  - Usage statistics aggregation across steps
+  - Output processor execution if configured
+  - Tripwire detection for content moderation
+  - Lazy stream consumption (streams only start when accessed)
+</Callout>
+
+## Related types
+
+- [ChunkType](/reference/agents/ChunkType) - Types of chunks emitted in the stream
+- [Agent.streamVNext()](/reference/agents/streamVNext) - Method that returns this stream interface

@@ -1,16 +1,15 @@
 import { TransformStream } from 'stream/web';
 import { asSchema, isDeepEqualData, parsePartialJson, type Schema } from 'ai-v5';
-import type { ObjectOptions } from '../../loop/types';
 import { safeValidateTypes } from '../aisdk/v5/compat';
 import {
   getTransformedSchema,
   getResponseFormat,
   type InferSchemaOutput,
   type OutputSchema,
-  // type ZodLikePartialSchema,
   type PartialSchemaOutput,
+  type ZodLikePartialSchema,
 } from './schema';
-import { type ChunkType } from '../types';
+import { ChunkFrom, type ChunkType } from '../types';
 
 interface ProcessPartialChunkParams {
   /** Text accumulated from streaming so far */
@@ -49,13 +48,40 @@ type ValidateAndTransformFinalResult<TObjectSchema extends OutputSchema = undefi
     };
 
 /**
- * Strategy interface for handling different output formats during streaming.
+ * Base class for all output format handlers.
  * Each handler implements format-specific logic for processing partial chunks
  * and validating final results.
  */
-interface OutputFormatHandler<TObjectSchema extends OutputSchema = undefined> {
-  /** The type of output format this handler manages */
-  readonly type: 'object' | 'array' | 'enum';
+abstract class BaseFormatHandler<TObjectSchema extends OutputSchema = undefined> {
+  abstract readonly type: 'object' | 'array' | 'enum';
+  /**
+   * The user-provided schema to validate the final result against.
+   */
+  readonly schema: Schema<InferSchemaOutput<TObjectSchema>> | undefined;
+
+  /**
+   * Whether to validate partial chunks. @planned
+   */
+  readonly validatePartialChunks: boolean = false;
+  /**
+   * Partial schema for validating partial chunks as they are streamed. @planned
+   */
+  readonly partialSchema?: ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>> | undefined;
+
+  constructor(schema?: TObjectSchema) {
+    if (!schema) {
+      this.schema = undefined;
+    } else {
+      this.schema = asSchema(schema);
+    }
+    // TODO: test partial chunk validation with zod schemas
+    // if (options.validatePartialChunks) {
+    //   if (schema !== undefined && 'partial' in schema && typeof schema.partial === 'function') {
+    //     this.validatePartialChunks = true;
+    //     this.partialSchema = schema.partial() as ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>>;
+    //   }
+    // }
+  }
 
   /**
    * Processes a partial chunk of accumulated text and determines if a new value should be emitted.
@@ -65,51 +91,24 @@ interface OutputFormatHandler<TObjectSchema extends OutputSchema = undefined> {
    * @param params.previousResult - Previous processing result (handler-specific state)
    * @returns Promise resolving to processing result with emission decision
    */
-  processPartialChunk(params: ProcessPartialChunkParams): Promise<ProcessPartialChunkResult>;
+  abstract processPartialChunk(params: ProcessPartialChunkParams): Promise<ProcessPartialChunkResult>;
 
   /**
    * Validates and transforms the final parsed value when streaming completes.
    * @param finalValue - The final parsed value to validate
    * @returns Promise resolving to validation result
    */
-  validateAndTransformFinal(
+  abstract validateAndTransformFinal(
     finalValue: InferSchemaOutput<TObjectSchema>,
   ): Promise<ValidateAndTransformFinalResult<TObjectSchema>>;
-}
-
-interface OutputFormatHandlerOptions {
-  validatePartialChunks?: boolean;
 }
 
 /**
  * Handles object format streaming. Emits parsed objects when they change during streaming.
  * This is the simplest format - objects are parsed and emitted directly without wrapping.
  */
-class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined>
-  implements OutputFormatHandler<TObjectSchema>
-{
+class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined> extends BaseFormatHandler<TObjectSchema> {
   readonly type = 'object' as const;
-  readonly schema: Schema<InferSchemaOutput<TObjectSchema>> | undefined;
-  // TODO: test partial object chunk validation with zod schemas
-  // readonly partialSchema: ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>> | undefined = undefined;
-  // readonly validatePartialChunks: boolean = false;
-  /**
-   * @param schema - The original user-provided schema for validation
-   */
-  constructor(schema?: TObjectSchema, options: OutputFormatHandlerOptions = {}) {
-    if (!schema) {
-      this.schema = undefined;
-    } else {
-      this.schema = asSchema(schema);
-    }
-    // TODO: test partial object chunk validation with zod schemas
-    // if (options.validatePartialChunks) {
-    //   if (schema !== undefined && 'partial' in schema && typeof schema.partial === 'function') {
-    //     this.validatePartialChunks = true;
-    //     this.partialSchema = schema.partial() as ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>>;
-    //   }
-    // }
-  }
 
   async processPartialChunk({
     accumulatedText,
@@ -117,7 +116,7 @@ class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined>
   }: ProcessPartialChunkParams): Promise<ProcessPartialChunkResult> {
     const { value: currentObjectJson, state } = await parsePartialJson(accumulatedText);
 
-    // TODO: test partial object chunk validation with zod schemas
+    // TODO: partial object chunk validation with zod schemas
     // if (this.validatePartialChunks && this.partialSchema) {
     //   const result = this.partialSchema?.safeParse(currentObjectJson);
     //   if (result.success && result.data && result.data !== undefined && !isDeepEqualData(previousObject, result.data)) {
@@ -138,8 +137,8 @@ class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined>
     ) {
       return {
         shouldEmit: ['successful-parse', 'repaired-parse'].includes(state),
-        emitValue: currentObjectJson as unknown, // TODO: partial validation of chunks
-        newPreviousResult: currentObjectJson as unknown, // TODO: partial validation of chunks
+        emitValue: currentObjectJson,
+        newPreviousResult: currentObjectJson,
       };
     }
     return { shouldEmit: false };
@@ -190,25 +189,12 @@ class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined>
  * for better generation reliability. This handler unwraps them and filters incomplete elements.
  * Emits progressive array states as elements are completed.
  */
-class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> implements OutputFormatHandler<TObjectSchema> {
+class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends BaseFormatHandler<TObjectSchema> {
   readonly type = 'array' as const;
-  readonly schema: Schema<InferSchemaOutput<TObjectSchema>> | undefined;
   /** Previously filtered array to track changes */
   private textPreviousFilteredArray: any[] = [];
   /** Whether we've emitted the initial empty array */
   private hasEmittedInitialArray = false;
-
-  /**
-   * Creates an array format handler.
-   * @param schema - The original user-provided schema for validation
-   */
-  constructor(schema?: TObjectSchema) {
-    if (!schema) {
-      this.schema = undefined;
-    } else {
-      this.schema = asSchema(schema);
-    }
-  }
 
   async processPartialChunk({
     accumulatedText,
@@ -309,26 +295,39 @@ class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> impleme
 }
 
 /**
- * Handles enum format streaming. Enums are wrapped in {result: "value"} objects by the LLM
- * for better generation reliability. This handler unwraps them and provides partial matching
- * during streaming to emit the best possible enum value as it's being generated.
+ * Handles enum format streaming. Enums are wrapped in {result: ""} objects by the LLM
+ * for better generation reliability. This handler unwraps them and provides partial matching.
+ * Emits progressive enum states as they are completed.
+ * Validates the final result against the user-provided schema.
  */
-class EnumFormatHandler<TObjectSchema extends OutputSchema = undefined> implements OutputFormatHandler<TObjectSchema> {
+class EnumFormatHandler<TObjectSchema extends OutputSchema = undefined> extends BaseFormatHandler<TObjectSchema> {
   readonly type = 'enum' as const;
   /** Previously emitted enum result to avoid duplicate emissions */
   private textPreviousEnumResult?: string;
-  readonly schema: Schema<InferSchemaOutput<TObjectSchema>> | undefined;
 
   /**
-   * Creates an enum format handler.
-   * @param schema - The original schema containing enum values for partial matching
+   * Finds the best matching enum value for a partial result string.
+   * If multiple values match, returns the partial string. If only one matches, returns that value.
+   * @param partialResult - Partial enum string from streaming
+   * @returns Best matching enum value or undefined if no matches
    */
-  constructor(schema?: TObjectSchema) {
-    if (!schema) {
-      this.schema = undefined;
-    } else {
-      this.schema = asSchema(schema);
+  private findBestEnumMatch(partialResult: string): string | undefined {
+    if (!this.schema?.jsonSchema?.enum) {
+      return undefined;
     }
+
+    const enumValues = this.schema.jsonSchema.enum;
+    const possibleEnumValues = enumValues
+      .filter((value: unknown): value is string => typeof value === 'string')
+      .filter((enumValue: string) => enumValue.startsWith(partialResult));
+
+    if (possibleEnumValues.length === 0) {
+      return undefined;
+    }
+
+    // Emit the most specific result - if there's exactly one match, use it; otherwise use partial
+    const firstMatch = possibleEnumValues[0];
+    return possibleEnumValues.length === 1 && firstMatch !== undefined ? firstMatch : partialResult;
   }
 
   async processPartialChunk({
@@ -361,31 +360,6 @@ class EnumFormatHandler<TObjectSchema extends OutputSchema = undefined> implemen
     }
 
     return { shouldEmit: false };
-  }
-
-  /**
-   * Finds the best matching enum value for a partial result string.
-   * If multiple values match, returns the partial string. If only one matches, returns that value.
-   * @param partialResult - Partial enum string from streaming
-   * @returns Best matching enum value or undefined if no matches
-   */
-  private findBestEnumMatch(partialResult: string): string | undefined {
-    if (!this.schema?.jsonSchema?.enum) {
-      return undefined;
-    }
-
-    const enumValues = this.schema.jsonSchema.enum;
-    const possibleEnumValues = enumValues
-      .filter((value: unknown): value is string => typeof value === 'string')
-      .filter((enumValue: string) => enumValue.startsWith(partialResult));
-
-    if (possibleEnumValues.length === 0) {
-      return undefined;
-    }
-
-    // Emit the most specific result - if there's exactly one match, use it; otherwise use partial
-    const firstMatch = possibleEnumValues[0];
-    return possibleEnumValues.length === 1 && firstMatch !== undefined ? firstMatch : partialResult;
   }
 
   async validateAndTransformFinal(
@@ -444,7 +418,7 @@ function createOutputHandler<TObjectSchema extends OutputSchema = undefined>({
 }: {
   schema?: TObjectSchema;
   transformedSchema: ReturnType<typeof getTransformedSchema<TObjectSchema>>;
-}): OutputFormatHandler<TObjectSchema> {
+}) {
   switch (transformedSchema?.outputFormat) {
     case 'array':
       return new ArrayFormatHandler(schema);
@@ -471,12 +445,12 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
   schema,
   onFinish,
 }: {
-  schema?: Parameters<typeof asSchema>[0];
+  schema?: TObjectSchema;
   /**
    * Callback to be called when the stream finishes.
    * @param data The final parsed object / array
    */
-  onFinish: (data: any) => void;
+  onFinish: (data: InferSchemaOutput<TObjectSchema>) => void;
 }) {
   const responseFormat = getResponseFormat(schema);
   const transformedSchema = getTransformedSchema(schema);
@@ -485,9 +459,14 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
   let accumulatedText = '';
   let previousObject: any = undefined;
   let finishReason: string | undefined;
+  let currentRunId: string | undefined;
 
   return new TransformStream<ChunkType<TObjectSchema>, ChunkType<TObjectSchema>>({
     async transform(chunk, controller) {
+      if (chunk.runId) {
+        currentRunId = chunk.runId;
+      }
+
       if (chunk.type === 'finish') {
         finishReason = chunk.payload.stepResult.reason;
         controller.enqueue(chunk);
@@ -514,7 +493,7 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
             from: chunk.from,
             runId: chunk.runId,
             type: 'object',
-            object: result.emitValue as PartialSchemaOutput<TObjectSchema>, // TODO: handle partial type validation of json chunks
+            object: result.emitValue as PartialSchemaOutput<TObjectSchema>, // TODO: handle partial runtime type validation of json chunks
           });
         }
       }
@@ -530,7 +509,7 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
       }
 
       if (['tool-calls'].includes(finishReason ?? '')) {
-        onFinish(undefined);
+        onFinish(undefined as InferSchemaOutput<TObjectSchema>);
         return;
       }
 
@@ -538,6 +517,8 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
 
       if (!finalResult.success) {
         controller.enqueue({
+          from: ChunkFrom.AGENT,
+          runId: currentRunId ?? '',
           type: 'error',
           payload: { error: finalResult.error ?? new Error('Validation failed') },
         });
@@ -556,15 +537,17 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
  * - For arrays: emits opening bracket, new elements, and closing bracket
  * - For objects/no-schema: emits the object as JSON
  */
-export function createJsonTextStreamTransformer(objectOptions: ObjectOptions) {
+export function createJsonTextStreamTransformer<TObjectSchema extends OutputSchema = undefined>(
+  schema?: TObjectSchema,
+) {
   let previousArrayLength = 0;
   let hasStartedArray = false;
   let chunkCount = 0;
-  const outputSchema = getTransformedSchema(objectOptions?.schema);
+  const outputSchema = getTransformedSchema(schema);
 
-  return new TransformStream<any, string>({
+  return new TransformStream<ChunkType<TObjectSchema>, string>({
     transform(chunk, controller) {
-      if (chunk.type !== 'object') {
+      if (chunk.type !== 'object' || !chunk.object) {
         return;
       }
 

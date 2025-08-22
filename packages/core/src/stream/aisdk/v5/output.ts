@@ -5,9 +5,8 @@ import { consumeStream, createTextStreamResponse, createUIMessageStream, createU
 import type { ObjectStreamPart, TextStreamPart, ToolSet, UIMessage, UIMessageStreamOptions } from 'ai-v5';
 import type z from 'zod';
 import type { MessageList } from '../../../agent/message-list';
-import type { ObjectOptions } from '../../../loop/types';
 import type { MastraModelOutput } from '../../base/output';
-import { getResponseFormat } from '../../base/schema';
+import { getResponseFormat, type OutputSchema } from '../../base/schema';
 import type { ChunkType } from '../../types';
 import type { ConsumeStreamOptions } from './compat';
 import { getResponseUIMessageId, convertFullStreamChunkToUIMessageStream } from './compat';
@@ -15,10 +14,10 @@ import { transformSteps } from './output-helpers';
 import { convertMastraChunkToAISDKv5 } from './transform';
 import type { OutputChunkType } from './transform';
 
-type AISDKV5OutputStreamOptions = {
+type AISDKV5OutputStreamOptions<TObjectSchema extends OutputSchema = undefined> = {
   toolCallStreaming?: boolean;
   includeRawChunks?: boolean;
-  objectOptions?: ObjectOptions;
+  output?: TObjectSchema;
 };
 
 export type AIV5FullStreamPart<T = undefined> = T extends undefined
@@ -31,9 +30,9 @@ export type AIV5FullStreamPart<T = undefined> = T extends undefined
         };
 export type AIV5FullStreamType<T> = ReadableStream<AIV5FullStreamPart<T>>;
 
-export class AISDKV5OutputStream<TObjectSchema = undefined> {
+export class AISDKV5OutputStream<TObjectSchema extends OutputSchema = undefined> {
   #modelOutput: MastraModelOutput<TObjectSchema>;
-  #options: AISDKV5OutputStreamOptions;
+  #options: AISDKV5OutputStreamOptions<TObjectSchema>;
   #messageList: MessageList;
   constructor({
     modelOutput,
@@ -41,7 +40,7 @@ export class AISDKV5OutputStream<TObjectSchema = undefined> {
     messageList,
   }: {
     modelOutput: MastraModelOutput<TObjectSchema>;
-    options: AISDKV5OutputStreamOptions;
+    options: AISDKV5OutputStreamOptions<TObjectSchema>;
     messageList: MessageList;
   }) {
     this.#modelOutput = modelOutput;
@@ -274,7 +273,7 @@ export class AISDKV5OutputStream<TObjectSchema = undefined> {
     let hasStarted: boolean = false;
 
     // let stepCounter = 1;
-    const responseFormat = getResponseFormat(this.#options.objectOptions?.schema);
+    const responseFormat = getResponseFormat(this.#options.output);
     const fullStream = this.#modelOutput.fullStream;
 
     const transformedStream = fullStream.pipeThrough(

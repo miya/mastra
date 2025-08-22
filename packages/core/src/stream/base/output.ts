@@ -3,11 +3,10 @@ import { TransformStream } from 'stream/web';
 import type { SharedV2ProviderMetadata, LanguageModelV2CallWarning } from '@ai-sdk/provider-v5';
 import type { Span } from '@opentelemetry/api';
 import { consumeStream } from 'ai-v5';
-import type { TelemetrySettings } from 'ai-v5';
+import type { FinishReason, TelemetrySettings } from 'ai-v5';
 import { TripWire } from '../../agent';
 import { MessageList } from '../../agent/message-list';
 import { MastraBase } from '../../base';
-import type { ObjectOptions } from '../../loop/types';
 import type { OutputProcessor } from '../../processors';
 import type { ProcessorState } from '../../processors/runner';
 import { ProcessorRunner } from '../../processors/runner';
@@ -17,8 +16,7 @@ import { AISDKV5OutputStream } from '../aisdk/v5/output';
 import { reasoningDetailsFromMessages, transformSteps } from '../aisdk/v5/output-helpers';
 import type { BufferedByStep, ChunkType, StepBufferItem } from '../types';
 import { createJsonTextStreamTransformer, createObjectStreamTransformer } from './output-format-handlers';
-import { getTransformedSchema } from './schema';
-import type z from 'zod';
+import { getTransformedSchema, type InferSchemaOutput, type OutputSchema, type PartialSchemaOutput } from './schema';
 
 export class JsonToSseTransformStream extends TransformStream<unknown, string> {
   constructor() {
@@ -33,7 +31,7 @@ export class JsonToSseTransformStream extends TransformStream<unknown, string> {
   }
 }
 
-type MastraModelOutputOptions<TObjectSchema = unknown> = {
+type MastraModelOutputOptions<TObjectSchema extends OutputSchema = undefined> = {
   runId: string;
   rootSpan?: Span;
   telemetry_settings?: TelemetrySettings;
@@ -41,12 +39,10 @@ type MastraModelOutputOptions<TObjectSchema = unknown> = {
   onFinish?: (event: Record<string, any>) => Promise<void> | void;
   onStepFinish?: (event: Record<string, any>) => Promise<void> | void;
   includeRawChunks?: boolean;
-  objectOptions?: {
-    schema?: TObjectSchema;
-  };
+  output?: TObjectSchema;
   outputProcessors?: OutputProcessor[];
 };
-export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
+export class MastraModelOutput<TObjectSchema extends OutputSchema = undefined> extends MastraBase {
   #aisdkv5: AISDKV5OutputStream<TObjectSchema>;
   #error: Error | string | { message: string; stack: string } | undefined;
   #baseStream: ReadableStream<ChunkType<TObjectSchema>>;
@@ -75,32 +71,30 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
   #bufferedFiles: any[] = [];
   #toolCallArgsDeltas: Record<string, string[]> = {};
   #toolCallDeltaIdNameMap: Record<string, string> = {};
-  #toolCalls: any[] = [];
-  #toolResults: any[] = [];
+  #toolCalls: any[] = []; // TODO: add type
+  #toolResults: any[] = []; // TODO: add type
   #warnings: LanguageModelV2CallWarning[] = [];
-  #finishReason: 'stop' | 'length' | 'tool-calls' | 'error' | 'other' | string | undefined;
+  #finishReason: FinishReason | string | undefined;
   #request: Record<string, any> | undefined;
   #usageCount: Record<string, number> = {};
   #tripwire = false;
   #tripwireReason = '';
 
   #delayedPromises = {
-    object: new DelayedPromise<
-      TObjectSchema extends undefined ? undefined : TObjectSchema extends z.ZodSchema ? z.infer<TObjectSchema> : unknown
-    >(),
-    finishReason: new DelayedPromise<string | undefined>(),
+    object: new DelayedPromise<InferSchemaOutput<TObjectSchema>>(),
+    finishReason: new DelayedPromise<FinishReason | string | undefined>(),
     usage: new DelayedPromise<Record<string, number>>(),
     warnings: new DelayedPromise<LanguageModelV2CallWarning[]>(),
     providerMetadata: new DelayedPromise<Record<string, any> | undefined>(),
-    response: new DelayedPromise<Record<string, any>>(),
-    request: new DelayedPromise<Record<string, any>>(),
+    response: new DelayedPromise<Record<string, any>>(), // TODO: add type
+    request: new DelayedPromise<Record<string, any>>(), // TODO: add type
     text: new DelayedPromise<string>(),
     reasoning: new DelayedPromise<string>(),
     reasoningText: new DelayedPromise<string | undefined>(),
-    sources: new DelayedPromise<any[]>(),
-    files: new DelayedPromise<any[]>(),
-    toolCalls: new DelayedPromise<any[]>(),
-    toolResults: new DelayedPromise<any[]>(),
+    sources: new DelayedPromise<any[]>(), // TODO: add type
+    files: new DelayedPromise<any[]>(), // TODO: add type
+    toolCalls: new DelayedPromise<any[]>(), // TODO: add type
+    toolResults: new DelayedPromise<any[]>(), // TODO: add type
     steps: new DelayedPromise<StepBufferItem[]>(),
     totalUsage: new DelayedPromise<Record<string, number>>(),
     content: new DelayedPromise<any>(),
@@ -310,9 +304,9 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
                     messagesWithStructuredData[0].content.metadata?.structuredOutput
                   ) {
                     const structuredOutput = messagesWithStructuredData[0].content.metadata.structuredOutput;
-                    self.#delayedPromises.object.resolve(structuredOutput);
-                  } else if (!self.#options.objectOptions?.schema) {
-                    self.#delayedPromises.object.resolve(undefined);
+                    self.#delayedPromises.object.resolve(structuredOutput as InferSchemaOutput<TObjectSchema>);
+                  } else if (!self.#options.output) {
+                    self.#delayedPromises.object.resolve(undefined as InferSchemaOutput<TObjectSchema>);
                   }
 
                   self.#delayedPromises.text.resolve(outputText);
@@ -320,8 +314,8 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
                 } else {
                   self.#delayedPromises.text.resolve(self.#bufferedText.join(''));
                   self.#delayedPromises.finishReason.resolve(self.#finishReason);
-                  if (!self.#options.objectOptions?.schema) {
-                    self.#delayedPromises.object.resolve(undefined);
+                  if (!self.#options.output) {
+                    self.#delayedPromises.object.resolve(undefined as InferSchemaOutput<TObjectSchema>);
                   }
                 }
               } catch (error) {
@@ -333,7 +327,7 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
                   self.#error = error instanceof Error ? error.message : String(error);
                   self.#delayedPromises.finishReason.resolve('error');
                 }
-                self.#delayedPromises.object.resolve(undefined);
+                self.#delayedPromises.object.resolve(undefined as InferSchemaOutput<TObjectSchema>);
               }
 
               // Resolve all delayed promises with final values
@@ -477,7 +471,7 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
       messageList,
       options: {
         toolCallStreaming: options?.toolCallStreaming,
-        objectOptions: options?.objectOptions,
+        output: options?.output,
       },
     });
   }
@@ -574,7 +568,7 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
       )
       .pipeThrough(
         createObjectStreamTransformer({
-          schema: self.#options.objectOptions?.schema,
+          schema: self.#options.output,
           onFinish: data => self.#delayedPromises.object.resolve(data),
         }),
       )
@@ -693,14 +687,6 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
     }
   }
 
-  // toUIMessageStreamResponse() {
-  //   const stream = this.teeStream()
-  //     .pipeThrough(new JsonToSseTransformStream())
-  //     .pipeThrough(new TextEncoderStream())
-
-  //   return new Response(stream as BodyInit);
-  // }
-
   async consumeStream(options?: ConsumeStreamOptions): Promise<void> {
     this.#streamConsumed = true;
     try {
@@ -791,16 +777,8 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
    * ```
    */
   get objectStream() {
-    const self = this;
-    if (!self.#options.objectOptions?.schema) {
-      throw new Error('objectStream requires objectOptions');
-    }
-
     return this.fullStream.pipeThrough(
-      new TransformStream<
-        ChunkType<TObjectSchema>,
-        TObjectSchema extends z.ZodSchema ? Partial<z.infer<TObjectSchema>> : unknown
-      >({
+      new TransformStream<ChunkType<TObjectSchema>, PartialSchemaOutput<TObjectSchema>>({
         transform(chunk, controller) {
           if (chunk.type === 'object') {
             controller.enqueue(chunk.object);
@@ -813,27 +791,21 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
   /**
    * Stream of individual array elements when output schema is an array type.
    */
-  get elementStream() {
+  get elementStream(): ReadableStream<InferSchemaOutput<TObjectSchema> extends Array<infer T> ? T : never> {
     let publishedElements = 0;
-    const self = this;
-    if (!self.#options.objectOptions) {
-      throw new Error('elementStream requires objectOptions');
-    }
 
     return this.fullStream.pipeThrough(
-      new TransformStream({
+      new TransformStream<
+        ChunkType<TObjectSchema>,
+        InferSchemaOutput<TObjectSchema> extends Array<infer T> ? T : never
+      >({
         transform(chunk, controller) {
-          switch (chunk.type) {
-            case 'object': {
-              const array = (chunk as any).object;
-              // Only process arrays - stream individual elements as they become available
-              if (Array.isArray(array)) {
-                // Publish new elements one by one
-                for (; publishedElements < array.length; publishedElements++) {
-                  controller.enqueue(array[publishedElements]);
-                }
+          if (chunk.type === 'object') {
+            if (Array.isArray(chunk.object)) {
+              // Publish new elements of the array one by one
+              for (; publishedElements < chunk.object.length; publishedElements++) {
+                controller.enqueue(chunk.object[publishedElements]);
               }
-              break;
             }
           }
         },
@@ -846,9 +818,9 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
    */
   get textStream() {
     const self = this;
-    const outputSchema = getTransformedSchema(self.#options.objectOptions?.schema);
+    const outputSchema = getTransformedSchema(self.#options.output);
     if (outputSchema?.outputFormat === 'array') {
-      return this.fullStream.pipeThrough(createJsonTextStreamTransformer(self.#options.objectOptions));
+      return this.fullStream.pipeThrough(createJsonTextStreamTransformer(self.#options.output));
     }
 
     return this.teeStream().pipeThrough(
@@ -875,8 +847,8 @@ export class MastraModelOutput<TObjectSchema = unknown> extends MastraBase {
    * ```
    */
   get object() {
-    if (!this.processorRunner && !this.#options.objectOptions?.schema) {
-      this.#delayedPromises.object.resolve(undefined);
+    if (!this.processorRunner && !this.#options.output) {
+      this.#delayedPromises.object.resolve(undefined as InferSchemaOutput<TObjectSchema>);
     }
 
     return this.#getDelayedPromise(this.#delayedPromises.object);

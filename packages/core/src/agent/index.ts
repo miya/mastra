@@ -69,6 +69,7 @@ import type {
   AgentMemoryOption,
   AgentAISpanProperties,
 } from './types';
+import type { OutputSchema } from '../stream/base/schema';
 export * from './input-processor';
 export { TripWire };
 export { MessageList };
@@ -2520,7 +2521,10 @@ Message ${msg.threadId && msg.threadId !== threadObject.id ? 'from previous conv
     };
   }
 
-  async #execute(options: InnerAgentExecutionOptions) {
+  async #execute<
+    OUTPUT extends OutputSchema | undefined = undefined,
+    FORMAT extends 'aisdk' | 'mastra' | undefined = undefined,
+  >(options: InnerAgentExecutionOptions<OUTPUT, FORMAT>) {
     const runtimeContext = options.runtimeContext || new RuntimeContext();
     const threadFromArgs = resolveThreadIdFromArgs({ threadId: options.threadId, memory: options.memory });
 
@@ -2980,7 +2984,7 @@ Message ${msg.threadId && msg.threadId !== threadObject.id ? 'from previous conv
             : [structuredProcessor];
         }
 
-        const loopOptions: ModelLoopStreamArgs<any, any> = {
+        const loopOptions: ModelLoopStreamArgs<any, OUTPUT> = {
           messages: result.messages as ModelMessage[],
           runtimeContext: result.runtimeContext!,
           runId,
@@ -2988,7 +2992,6 @@ Message ${msg.threadId && msg.threadId !== threadObject.id ? 'from previous conv
           tools: result.tools,
           resourceId: result.resourceId,
           threadId: result.threadId,
-          output: result.output,
           structuredOutput: result.structuredOutput,
           stopWhen: result.stopWhen,
           options: {
@@ -3036,9 +3039,7 @@ Message ${msg.threadId && msg.threadId !== threadObject.id ? 'from previous conv
             },
             onStepFinish: result.onStepFinish,
           },
-          objectOptions: {
-            schema: options.output,
-          },
+          output: options.output,
           outputProcessors: effectiveOutputProcessors,
           modelSettings: {
             temperature: 0,
@@ -3245,7 +3246,7 @@ Message ${msg.threadId && msg.threadId !== threadObject.id ? 'from previous conv
   }
 
   async generateVNext<
-    OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
+    OUTPUT extends OutputSchema | undefined = undefined,
     STRUCTURED_OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
     FORMAT extends 'aisdk' | 'mastra' = 'mastra',
   >(
@@ -3302,7 +3303,7 @@ Message ${msg.threadId && msg.threadId !== threadObject.id ? 'from previous conv
    * ```
    */
   async streamVNext<
-    OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
+    OUTPUT extends OutputSchema | undefined = undefined,
     STRUCTURED_OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
     FORMAT extends 'mastra' | 'aisdk' | undefined = undefined,
   >(

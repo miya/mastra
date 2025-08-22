@@ -79,7 +79,7 @@ export function getTransformedSchema<TObjectSchema extends OutputSchema = undefi
   };
 }
 
-type ResponseFormatResult =
+export function getResponseFormat(schema?: OutputSchema | undefined):
   | {
       type: 'text';
     }
@@ -89,8 +89,7 @@ type ResponseFormatResult =
        * JSON schema that the generated output should conform to.
        */
       schema?: JSONSchema7;
-    };
-export function getResponseFormat(schema?: Parameters<typeof asSchema>[0] | undefined): ResponseFormatResult {
+    } {
   if (schema) {
     const transformedSchema = getTransformedSchema(schema);
     return {
@@ -104,56 +103,3 @@ export function getResponseFormat(schema?: Parameters<typeof asSchema>[0] | unde
     type: 'text',
   };
 }
-
-// // export type TObjectSchema<OBJECT> = z4.core.$ZodType<OBJECT, any> | z3.Schema<OBJECT, z3.ZodTypeDef, any> | Schema<OBJECT> | undefined;
-
-// /**
-//  * Used to mark validator functions so we can support both Zod and custom schemas.
-//  */
-// declare const validatorSymbol: unique symbol;
-// type ValidationResult<OBJECT> =
-//   | {
-//       success: true;
-//       value: OBJECT;
-//     }
-//   | {
-//       success: false;
-//       error: Error;
-//     };
-// type Validator<OBJECT = unknown> = {
-//   /**
-//    * Used to mark validator functions so we can support both Zod and custom schemas.
-//    */
-//   [validatorSymbol]: true;
-//   /**
-//    * Optional. Validates that the structure of a value matches this schema,
-//    * and returns a typed version of the value if it does.
-//    */
-//   readonly validate?: (value: unknown) => ValidationResult<OBJECT> | PromiseLike<ValidationResult<OBJECT>>;
-// };
-
-// /**
-//  * Used to mark schemas so we can support both Zod and custom schemas.
-//  */
-// declare const schemaSymbol: unique symbol;
-// type Schema<OBJECT = unknown> = Validator<OBJECT> & {
-//   /**
-//    * Used to mark schemas so we can support both Zod and custom schemas.
-//    */
-//   [schemaSymbol]: true;
-//   /**
-//    * Schema type for inference.
-//    */
-//   _type: OBJECT;
-//   /**
-//    * The JSON Schema for the schema. It is passed to the providers.
-//    */
-//   readonly jsonSchema: JSONSchema7;
-// };
-// // type FlexibleSchema<T> = z4.core.$ZodType<T, any> | z3.Schema<T, z3.ZodTypeDef, any> | Schema<T>;
-
-// export type OutputSchema<OBJECT = unknown> =
-//   | z4.core.$ZodType<OBJECT, any>
-//   | z3.Schema<OBJECT, z3.ZodTypeDef, any>
-//   | Schema<OBJECT>
-//   | undefined;
