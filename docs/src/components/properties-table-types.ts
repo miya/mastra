@@ -17,4 +17,6 @@ export interface ContentItem {
   description: string;
   properties?: Property[];
   defaultValue?: string;
+  isExperimental?: boolean;
+  deprecated?: string;
 }

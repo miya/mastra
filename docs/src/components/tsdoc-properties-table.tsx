@@ -27,17 +27,25 @@ export const TSDocPropertiesTable: React.FC<TSDocToPropertiesTableProps> = ({
 export function definitionToContent(
   definition: ReturnType<typeof generateDefinition>,
 ): ContentItem[] {
-  let content: ContentItem[] = [];
-  if ("entries" in definition) {
-    content =
-      definition?.entries?.map((field: TypeField) => ({
+  if (!("entries" in definition)) {
+    return [];
+  }
+
+  const content: ContentItem[] =
+    definition?.entries
+      ?.filter(
+        (field: TypeField) =>
+          field.tags?.internal === undefined && field.name !== "#private",
+      )
+      .map((field: TypeField) => ({
         name: field.name,
         type: field.type,
         isOptional: field.optional,
         description: field.description || "",
-        // Extract default value from tags if present
         defaultValue: field.tags?.default || field.tags?.defaultValue,
+        isExperimental: field.tags?.experimental !== undefined,
+        deprecated: field.tags?.deprecated,
       })) || [];
-  }
+
   return content;
 }
