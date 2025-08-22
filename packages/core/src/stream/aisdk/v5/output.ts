@@ -278,7 +278,7 @@ export class AISDKV5OutputStream<OUTPUT extends OutputSchema = undefined> {
   }
 
   /**
-   * AI SDK v5 formatted stream with TextStreamPart chunks.
+   * Stream of all chunks in AI SDK v5 format.
    */
   get fullStream(): AIV5FullStreamType<OUTPUT> {
     let startEvent: OutputChunkType;
