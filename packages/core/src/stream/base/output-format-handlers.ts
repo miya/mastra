@@ -29,14 +29,14 @@ interface ProcessPartialChunkResult {
   newPreviousResult?: unknown;
 }
 
-type ValidateAndTransformFinalResult<TObjectSchema extends OutputSchema = undefined> =
+type ValidateAndTransformFinalResult<OUTPUT extends OutputSchema = undefined> =
   | {
       /** Whether validation succeeded */
       success: true;
       /**
        * The validated and transformed value if successful
        */
-      value: InferSchemaOutput<TObjectSchema>;
+      value: InferSchemaOutput<OUTPUT>;
     }
   | {
       /** Whether validation succeeded */
@@ -52,12 +52,12 @@ type ValidateAndTransformFinalResult<TObjectSchema extends OutputSchema = undefi
  * Each handler implements format-specific logic for processing partial chunks
  * and validating final results.
  */
-abstract class BaseFormatHandler<TObjectSchema extends OutputSchema = undefined> {
+abstract class BaseFormatHandler<OUTPUT extends OutputSchema = undefined> {
   abstract readonly type: 'object' | 'array' | 'enum';
   /**
    * The user-provided schema to validate the final result against.
    */
-  readonly schema: Schema<InferSchemaOutput<TObjectSchema>> | undefined;
+  readonly schema: Schema<InferSchemaOutput<OUTPUT>> | undefined;
 
   /**
    * Whether to validate partial chunks. @planned
@@ -66,9 +66,9 @@ abstract class BaseFormatHandler<TObjectSchema extends OutputSchema = undefined>
   /**
    * Partial schema for validating partial chunks as they are streamed. @planned
    */
-  readonly partialSchema?: ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>> | undefined;
+  readonly partialSchema?: ZodLikePartialSchema<InferSchemaOutput<OUTPUT>> | undefined;
 
-  constructor(schema?: TObjectSchema, options: { validatePartialChunks?: boolean } = {}) {
+  constructor(schema?: OUTPUT, options: { validatePartialChunks?: boolean } = {}) {
     if (!schema) {
       this.schema = undefined;
     } else {
@@ -77,7 +77,7 @@ abstract class BaseFormatHandler<TObjectSchema extends OutputSchema = undefined>
     if (options.validatePartialChunks) {
       if (schema !== undefined && 'partial' in schema && typeof schema.partial === 'function') {
         this.validatePartialChunks = true;
-        this.partialSchema = schema.partial() as ZodLikePartialSchema<InferSchemaOutput<TObjectSchema>>;
+        this.partialSchema = schema.partial() as ZodLikePartialSchema<InferSchemaOutput<OUTPUT>>;
       }
     }
   }
@@ -98,15 +98,15 @@ abstract class BaseFormatHandler<TObjectSchema extends OutputSchema = undefined>
    * @returns Promise resolving to validation result
    */
   abstract validateAndTransformFinal(
-    finalValue: InferSchemaOutput<TObjectSchema>,
-  ): Promise<ValidateAndTransformFinalResult<TObjectSchema>>;
+    finalValue: InferSchemaOutput<OUTPUT>,
+  ): Promise<ValidateAndTransformFinalResult<OUTPUT>>;
 }
 
 /**
  * Handles object format streaming. Emits parsed objects when they change during streaming.
  * This is the simplest format - objects are parsed and emitted directly without wrapping.
  */
-class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined> extends BaseFormatHandler<TObjectSchema> {
+class ObjectFormatHandler<OUTPUT extends OutputSchema = undefined> extends BaseFormatHandler<OUTPUT> {
   readonly type = 'object' as const;
 
   async processPartialChunk({
@@ -149,8 +149,8 @@ class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined> extend
   }
 
   async validateAndTransformFinal(
-    finalValue: InferSchemaOutput<TObjectSchema>,
-  ): Promise<ValidateAndTransformFinalResult<TObjectSchema>> {
+    finalValue: InferSchemaOutput<OUTPUT>,
+  ): Promise<ValidateAndTransformFinalResult<OUTPUT>> {
     if (!finalValue) {
       return {
         success: false,
@@ -193,7 +193,7 @@ class ObjectFormatHandler<TObjectSchema extends OutputSchema = undefined> extend
  * for better generation reliability. This handler unwraps them and filters incomplete elements.
  * Emits progressive array states as elements are completed.
  */
-class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends BaseFormatHandler<TObjectSchema> {
+class ArrayFormatHandler<OUTPUT extends OutputSchema = undefined> extends BaseFormatHandler<OUTPUT> {
   readonly type = 'array' as const;
   /** Previously filtered array to track changes */
   private textPreviousFilteredArray: any[] = [];
@@ -210,7 +210,7 @@ class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends
     if (currentObjectJson !== undefined && !isDeepEqualData(previousObject, currentObjectJson)) {
       // For arrays, extract and filter elements
       const rawElements = (currentObjectJson as any)?.elements || [];
-      const filteredElements: Partial<InferSchemaOutput<TObjectSchema>>[] = [];
+      const filteredElements: Partial<InferSchemaOutput<OUTPUT>>[] = [];
 
       // Filter out incomplete elements (like empty objects {})
       for (let i = 0; i < rawElements.length; i++) {
@@ -237,8 +237,8 @@ class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends
           this.textPreviousFilteredArray = [];
           return {
             shouldEmit: true,
-            emitValue: [] as unknown as Partial<InferSchemaOutput<TObjectSchema>>,
-            newPreviousResult: currentObjectJson as Partial<InferSchemaOutput<TObjectSchema>>,
+            emitValue: [] as unknown as Partial<InferSchemaOutput<OUTPUT>>,
+            newPreviousResult: currentObjectJson as Partial<InferSchemaOutput<OUTPUT>>,
           };
         }
       }
@@ -248,8 +248,8 @@ class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends
         this.textPreviousFilteredArray = [...filteredElements];
         return {
           shouldEmit: true,
-          emitValue: filteredElements as unknown as Partial<InferSchemaOutput<TObjectSchema>>,
-          newPreviousResult: currentObjectJson as Partial<InferSchemaOutput<TObjectSchema>>,
+          emitValue: filteredElements as unknown as Partial<InferSchemaOutput<OUTPUT>>,
+          newPreviousResult: currentObjectJson as Partial<InferSchemaOutput<OUTPUT>>,
         };
       }
     }
@@ -258,8 +258,8 @@ class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends
   }
 
   async validateAndTransformFinal(
-    _finalValue: InferSchemaOutput<TObjectSchema>,
-  ): Promise<ValidateAndTransformFinalResult<TObjectSchema>> {
+    _finalValue: InferSchemaOutput<OUTPUT>,
+  ): Promise<ValidateAndTransformFinalResult<OUTPUT>> {
     const resultValue = this.textPreviousFilteredArray;
 
     if (!resultValue) {
@@ -272,7 +272,7 @@ class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends
     if (!this.schema) {
       return {
         success: true,
-        value: resultValue as InferSchemaOutput<TObjectSchema>,
+        value: resultValue as InferSchemaOutput<OUTPUT>,
       };
     }
 
@@ -305,7 +305,7 @@ class ArrayFormatHandler<TObjectSchema extends OutputSchema = undefined> extends
  * Emits progressive enum states as they are completed.
  * Validates the final result against the user-provided schema.
  */
-class EnumFormatHandler<TObjectSchema extends OutputSchema = undefined> extends BaseFormatHandler<TObjectSchema> {
+class EnumFormatHandler<OUTPUT extends OutputSchema = undefined> extends BaseFormatHandler<OUTPUT> {
   readonly type = 'enum' as const;
   /** Previously emitted enum result to avoid duplicate emissions */
   private textPreviousEnumResult?: string;
@@ -367,8 +367,8 @@ class EnumFormatHandler<TObjectSchema extends OutputSchema = undefined> extends 
   }
 
   async validateAndTransformFinal(
-    finalValue: InferSchemaOutput<TObjectSchema>,
-  ): Promise<ValidateAndTransformFinalResult<TObjectSchema>> {
+    finalValue: InferSchemaOutput<OUTPUT>,
+  ): Promise<ValidateAndTransformFinalResult<OUTPUT>> {
     // For enums, check the wrapped format and unwrap
     if (!finalValue || typeof finalValue !== 'object' || typeof finalValue.result !== 'string') {
       return {
@@ -416,12 +416,12 @@ class EnumFormatHandler<TObjectSchema extends OutputSchema = undefined> extends 
  * @param transformedSchema - Wrapped/transformed schema used for LLM generation (arrays wrapped in {elements: []}, enums in {result: ""})
  * @returns Handler instance for the detected format type
  */
-function createOutputHandler<TObjectSchema extends OutputSchema = undefined>({
+function createOutputHandler<OUTPUT extends OutputSchema = undefined>({
   schema,
   transformedSchema,
 }: {
-  schema?: TObjectSchema;
-  transformedSchema: ReturnType<typeof getTransformedSchema<TObjectSchema>>;
+  schema?: OUTPUT;
+  transformedSchema: ReturnType<typeof getTransformedSchema<OUTPUT>>;
 }) {
   switch (transformedSchema?.outputFormat) {
     case 'array':
@@ -445,16 +445,16 @@ function createOutputHandler<TObjectSchema extends OutputSchema = undefined>({
  * - For enums: unwraps from {result: ""} wrapper and provides partial matching
  * - Always passes through original chunks for downstream processing
  */
-export function createObjectStreamTransformer<TObjectSchema extends OutputSchema = undefined>({
+export function createObjectStreamTransformer<OUTPUT extends OutputSchema = undefined>({
   schema,
   onFinish,
 }: {
-  schema?: TObjectSchema;
+  schema?: OUTPUT;
   /**
    * Callback to be called when the stream finishes.
    * @param data The final parsed object / array
    */
-  onFinish: (data: InferSchemaOutput<TObjectSchema>) => void;
+  onFinish: (data: InferSchemaOutput<OUTPUT>) => void;
 }) {
   const responseFormat = getResponseFormat(schema);
   const transformedSchema = getTransformedSchema(schema);
@@ -465,7 +465,7 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
   let finishReason: string | undefined;
   let currentRunId: string | undefined;
 
-  return new TransformStream<ChunkType<TObjectSchema>, ChunkType<TObjectSchema>>({
+  return new TransformStream<ChunkType<OUTPUT>, ChunkType<OUTPUT>>({
     async transform(chunk, controller) {
       if (chunk.runId) {
         currentRunId = chunk.runId;
@@ -497,7 +497,7 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
             from: chunk.from,
             runId: chunk.runId,
             type: 'object',
-            object: result.emitValue as PartialSchemaOutput<TObjectSchema>, // TODO: handle partial runtime type validation of json chunks
+            object: result.emitValue as PartialSchemaOutput<OUTPUT>, // TODO: handle partial runtime type validation of json chunks
           });
         }
       }
@@ -513,7 +513,7 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
       }
 
       if (['tool-calls'].includes(finishReason ?? '')) {
-        onFinish(undefined as InferSchemaOutput<TObjectSchema>);
+        onFinish(undefined as InferSchemaOutput<OUTPUT>);
         return;
       }
 
@@ -541,15 +541,13 @@ export function createObjectStreamTransformer<TObjectSchema extends OutputSchema
  * - For arrays: emits opening bracket, new elements, and closing bracket
  * - For objects/no-schema: emits the object as JSON
  */
-export function createJsonTextStreamTransformer<TObjectSchema extends OutputSchema = undefined>(
-  schema?: TObjectSchema,
-) {
+export function createJsonTextStreamTransformer<OUTPUT extends OutputSchema = undefined>(schema?: OUTPUT) {
   let previousArrayLength = 0;
   let hasStartedArray = false;
   let chunkCount = 0;
   const outputSchema = getTransformedSchema(schema);
 
-  return new TransformStream<ChunkType<TObjectSchema>, string>({
+  return new TransformStream<ChunkType<OUTPUT>, string>({
     transform(chunk, controller) {
       if (chunk.type !== 'object' || !chunk.object) {
         return;

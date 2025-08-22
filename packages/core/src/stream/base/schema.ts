@@ -3,17 +3,17 @@ import type { JSONSchema7, Schema } from 'ai-v5';
 import type z4 from 'zod/v4';
 import type z3 from 'zod/v3';
 
-export type PartialSchemaOutput<TObjectSchema extends OutputSchema = undefined> = TObjectSchema extends undefined
+export type PartialSchemaOutput<OUTPUT extends OutputSchema = undefined> = OUTPUT extends undefined
   ? undefined
-  : Partial<InferSchemaOutput<TObjectSchema>>;
+  : Partial<InferSchemaOutput<OUTPUT>>;
 
-export type InferSchemaOutput<TObjectSchema extends OutputSchema> = TObjectSchema extends undefined
+export type InferSchemaOutput<OUTPUT extends OutputSchema> = OUTPUT extends undefined
   ? undefined
-  : TObjectSchema extends z4.core.$ZodType<infer OBJECT, any>
+  : OUTPUT extends z4.core.$ZodType<infer OBJECT, any>
     ? OBJECT // Zod v4
-    : TObjectSchema extends z3.Schema<infer OBJECT, z3.ZodTypeDef, any>
+    : OUTPUT extends z3.Schema<infer OBJECT, z3.ZodTypeDef, any>
       ? OBJECT // Zod v3
-      : TObjectSchema extends Schema<infer OBJECT>
+      : OUTPUT extends Schema<infer OBJECT>
         ? OBJECT // JSON Schema (AI SDK's Schema type)
         : unknown; // Fallback
 
@@ -30,7 +30,7 @@ export type ZodLikePartialSchema<T = any> = (
   safeParse(value: unknown): { success: boolean; data?: Partial<T>; error?: any };
 };
 
-export function getTransformedSchema<TObjectSchema extends OutputSchema = undefined>(schema?: TObjectSchema) {
+export function getTransformedSchema<OUTPUT extends OutputSchema = undefined>(schema?: OUTPUT) {
   const jsonSchema = schema ? asSchema(schema).jsonSchema : undefined;
   if (!jsonSchema) {
     return undefined;

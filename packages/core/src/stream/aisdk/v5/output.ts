@@ -14,10 +14,10 @@ import { transformSteps } from './output-helpers';
 import { convertMastraChunkToAISDKv5 } from './transform';
 import type { OutputChunkType } from './transform';
 
-type AISDKV5OutputStreamOptions<TObjectSchema extends OutputSchema = undefined> = {
+type AISDKV5OutputStreamOptions<OUTPUT extends OutputSchema = undefined> = {
   toolCallStreaming?: boolean;
   includeRawChunks?: boolean;
-  output?: TObjectSchema;
+  output?: OUTPUT;
 };
 
 export type AIV5FullStreamPart<T = undefined> = T extends undefined
@@ -30,17 +30,17 @@ export type AIV5FullStreamPart<T = undefined> = T extends undefined
         };
 export type AIV5FullStreamType<T> = ReadableStream<AIV5FullStreamPart<T>>;
 
-export class AISDKV5OutputStream<TObjectSchema extends OutputSchema = undefined> {
-  #modelOutput: MastraModelOutput<TObjectSchema>;
-  #options: AISDKV5OutputStreamOptions<TObjectSchema>;
+export class AISDKV5OutputStream<OUTPUT extends OutputSchema = undefined> {
+  #modelOutput: MastraModelOutput<OUTPUT>;
+  #options: AISDKV5OutputStreamOptions<OUTPUT>;
   #messageList: MessageList;
   constructor({
     modelOutput,
     options,
     messageList,
   }: {
-    modelOutput: MastraModelOutput<TObjectSchema>;
-    options: AISDKV5OutputStreamOptions<TObjectSchema>;
+    modelOutput: MastraModelOutput<OUTPUT>;
+    options: AISDKV5OutputStreamOptions<OUTPUT>;
     messageList: MessageList;
   }) {
     this.#modelOutput = modelOutput;
@@ -192,6 +192,9 @@ export class AISDKV5OutputStream<TObjectSchema extends OutputSchema = undefined>
     return this.#modelOutput.text;
   }
 
+  /**
+   * Stream of valid JSON chunks. The final JSON result is validated against the output schema when the stream ends.
+   */
   get objectStream() {
     return this.#modelOutput.objectStream;
   }
@@ -260,15 +263,24 @@ export class AISDKV5OutputStream<TObjectSchema extends OutputSchema = undefined>
     return this.#messageList.get.response.aiV5.modelContent();
   }
 
+  /**
+   * Stream of only text content, compatible with streaming text responses.
+   */
   get textStream() {
     return this.#modelOutput.textStream;
   }
 
+  /**
+   * Stream of individual array elements when output schema is an array type.
+   */
   get elementStream() {
     return this.#modelOutput.elementStream;
   }
 
-  get fullStream(): AIV5FullStreamType<TObjectSchema> {
+  /**
+   * AI SDK v5 formatted stream with TextStreamPart chunks.
+   */
+  get fullStream(): AIV5FullStreamType<OUTPUT> {
     let startEvent: OutputChunkType;
     let hasStarted: boolean = false;
 
@@ -277,54 +289,53 @@ export class AISDKV5OutputStream<TObjectSchema extends OutputSchema = undefined>
     const fullStream = this.#modelOutput.fullStream;
 
     const transformedStream = fullStream.pipeThrough(
-      new TransformStream<
-        ChunkType | NonNullable<OutputChunkType>,
-        TextStreamPart<ToolSet> | ObjectStreamPart<TObjectSchema>
-      >({
-        transform(chunk, controller) {
-          if (responseFormat?.type === 'json' && chunk.type === 'object') {
-            /**
-             * Pass through 'object' chunks that were created by
-             * createObjectStreamTransformer in base/output.ts.
-             */
-            controller.enqueue(chunk as TextStreamPart<ToolSet> | ObjectStreamPart<TObjectSchema>);
-            return;
-          }
-
-          if (chunk.type === 'step-start' && !startEvent) {
-            startEvent = convertMastraChunkToAISDKv5({
-              chunk,
-            });
-            // stepCounter++;
-            return;
-          } else if (chunk.type !== 'error') {
-            hasStarted = true;
-          }
-
-          if (startEvent && hasStarted) {
-            controller.enqueue(startEvent as TextStreamPart<ToolSet> | ObjectStreamPart<TObjectSchema>);
-            startEvent = undefined;
-          }
-
-          if ('payload' in chunk) {
-            const transformedChunk = convertMastraChunkToAISDKv5({
-              chunk,
-            });
-
-            if (transformedChunk) {
-              // if (!['start', 'finish', 'finish-step'].includes(transformedChunk.type)) {
-              //   console.log('step counter', stepCounter);
-              //   transformedChunk.id = transformedChunk.id ?? stepCounter.toString();
-              // }
-
-              controller.enqueue(transformedChunk as TextStreamPart<ToolSet> | ObjectStreamPart<TObjectSchema>);
+      new TransformStream<ChunkType | NonNullable<OutputChunkType>, TextStreamPart<ToolSet> | ObjectStreamPart<OUTPUT>>(
+        {
+          transform(chunk, controller) {
+            if (responseFormat?.type === 'json' && chunk.type === 'object') {
+              /**
+               * Pass through 'object' chunks that were created by
+               * createObjectStreamTransformer in base/output.ts.
+               */
+              controller.enqueue(chunk as TextStreamPart<ToolSet> | ObjectStreamPart<OUTPUT>);
+              return;
             }
-          }
+
+            if (chunk.type === 'step-start' && !startEvent) {
+              startEvent = convertMastraChunkToAISDKv5({
+                chunk,
+              });
+              // stepCounter++;
+              return;
+            } else if (chunk.type !== 'error') {
+              hasStarted = true;
+            }
+
+            if (startEvent && hasStarted) {
+              controller.enqueue(startEvent as TextStreamPart<ToolSet> | ObjectStreamPart<OUTPUT>);
+              startEvent = undefined;
+            }
+
+            if ('payload' in chunk) {
+              const transformedChunk = convertMastraChunkToAISDKv5({
+                chunk,
+              });
+
+              if (transformedChunk) {
+                // if (!['start', 'finish', 'finish-step'].includes(transformedChunk.type)) {
+                //   console.log('step counter', stepCounter);
+                //   transformedChunk.id = transformedChunk.id ?? stepCounter.toString();
+                // }
+
+                controller.enqueue(transformedChunk as TextStreamPart<ToolSet> | ObjectStreamPart<OUTPUT>);
+              }
+            }
+          },
         },
-      }),
+      ),
     );
 
-    return transformedStream as any as AIV5FullStreamType<TObjectSchema>;
+    return transformedStream as any as AIV5FullStreamType<OUTPUT>;
   }
 
   async getFullOutput() {
