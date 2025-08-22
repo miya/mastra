@@ -1,15 +1,11 @@
 import { TransformStream } from 'stream/web';
-import { asSchema, isDeepEqualData, parsePartialJson, type Schema } from 'ai-v5';
+import { asSchema, isDeepEqualData, parsePartialJson } from 'ai-v5';
+import type { Schema } from 'ai-v5';
 import { safeValidateTypes } from '../aisdk/v5/compat';
-import {
-  getTransformedSchema,
-  getResponseFormat,
-  type InferSchemaOutput,
-  type OutputSchema,
-  type PartialSchemaOutput,
-  type ZodLikePartialSchema,
-} from './schema';
-import { ChunkFrom, type ChunkType } from '../types';
+import { ChunkFrom } from '../types';
+import type { ChunkType } from '../types';
+import { getTransformedSchema, getResponseFormat } from './schema';
+import type { InferSchemaOutput, OutputSchema, PartialSchemaOutput, ZodLikePartialSchema } from './schema';
 
 interface ProcessPartialChunkParams {
   /** Text accumulated from streaming so far */
