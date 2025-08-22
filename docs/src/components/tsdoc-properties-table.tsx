@@ -26,7 +26,7 @@ interface TSDocToPropertiesTableProps {
 }
 
 /**
- * Component that uses TSDoc to parse TypeScript types and renders them using PropertiesTable
+ * Component that uses TSDoc to parse TypeScript types and renders them using our existing PropertiesTable component.
  */
 export const TSDocPropertiesTable: React.FC<TSDocToPropertiesTableProps> = ({
   code,
