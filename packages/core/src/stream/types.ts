@@ -260,8 +260,6 @@ export type ChunkType<TObjectSchema extends OutputSchema = undefined> =
   | (BaseChunkType & {
       type: 'object';
       object: PartialSchemaOutput<TObjectSchema>;
-      // object: Partial<InferSchemaOutput<TObjectSchema>>;
-      // object: TObjectSchema extends z.ZodSchema ? Partial<z.infer<TObjectSchema>> : unknown;
     })
   | (BaseChunkType & { type: 'tool-output'; payload: ToolOutputPayload })
   | (BaseChunkType & { type: 'step-output'; payload: StepOutputPayload })
