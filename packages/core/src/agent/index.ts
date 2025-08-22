@@ -3277,6 +3277,30 @@ Message ${msg.threadId && msg.threadId !== threadObject.id ? 'from previous conv
       : Awaited<ReturnType<MastraModelOutput<OUTPUT>['getFullOutput']>>;
   }
 
+  /**
+   * Streams responses from the agent with enhanced capabilities and format flexibility.
+   *
+   * @example
+   * ```typescript
+   * // Default Mastra format
+   * const stream = await agent.streamVNext("Hello, world!");
+   *
+   * // With json response format
+   * const stream = await agent.streamVNext("Extract data", {
+   *   output: z.object({ name: z.string(), age: z.number() })
+   * });
+   * // partial json chunks
+   * for await (const data of stream.objectStream) {
+   *   console.log(data); // { name: 'John' }, { name: 'John', age: 30 }
+   * }
+   * // final validated json
+   * const data = await stream.object // { name: 'John', age: 30 }
+   *
+   * // AISDK compatible format
+   * const aiSdkStream = await agent.streamVNext("Hello!", { format: 'aisdk' });
+   * await aiSdkStream.toUIMessageStream()
+   * ```
+   */
   async streamVNext<
     OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
     STRUCTURED_OUTPUT extends ZodSchema | JSONSchema7 | undefined = undefined,
