@@ -2855,13 +2855,6 @@ Message ${msg.threadId && msg.threadId !== threadObject.id ? 'from previous conv
         const streamResult = llm.stream({
           ...inputData,
           outputProcessors,
-          ...(inputData.output
-            ? {
-                objectOptions: {
-                  schema: inputData.output,
-                },
-              }
-            : {}),
         });
 
         if (options.format === 'aisdk') {
