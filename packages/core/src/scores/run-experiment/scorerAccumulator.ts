@@ -4,11 +4,10 @@ export class ScoreAccumulator {
   private stepScores: Record<string, Record<string, number[]>> = {};
 
   addScores(scorerResults: Record<string, any>) {
-    // Check if this is the new nested structure
-    if ('workflow' in scorerResults || 'stepScorers' in scorerResults) {
+    const isTargetWorkflowAndHasStepScores = 'steps' in scorerResults;
+    if (isTargetWorkflowAndHasStepScores) {
       this.addNestedScores(scorerResults);
     } else {
-      // Handle flat structure (existing behavior)
       this.addFlatScores(scorerResults);
     }
   }
@@ -23,7 +22,6 @@ export class ScoreAccumulator {
   }
 
   private addNestedScores(scorerResults: Record<string, any>) {
-    // Handle workflow-level scorers
     if ('workflow' in scorerResults && scorerResults.workflow) {
       for (const [scorerName, result] of Object.entries(scorerResults.workflow)) {
         if (!this.workflowScores[scorerName]) {
@@ -33,7 +31,6 @@ export class ScoreAccumulator {
       }
     }
 
-    // Handle step-level scorers
     if ('steps' in scorerResults && scorerResults.steps) {
       for (const [stepId, stepResults] of Object.entries(scorerResults.steps)) {
         if (!this.stepScores[stepId]) {
