@@ -360,12 +360,6 @@ describe('runExperiment', () => {
         ],
         scorers: [mockScorers[0]],
         target: workflow,
-        workflowConfig: {
-          workflow,
-          stepScorers: {
-            'test-step': [mockScorers[0]],
-          },
-        },
       });
 
       expect(result.scores.toxicity).toBe(0.9);
@@ -394,14 +388,12 @@ describe('runExperiment', () => {
 
       await runExperiment({
         data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
-        scorers: [mockScorers[1]],
-        target: workflow,
-        workflowConfig: {
-          workflow,
+        scorers: {
           stepScorers: {
             'test-step': [mockScorers[1]],
           },
         },
+        target: workflow,
       });
 
       expect(mockScorers[0].run).not.toHaveBeenCalled();
@@ -432,14 +424,12 @@ describe('runExperiment', () => {
 
       await runExperiment({
         data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
-        scorers: [mockScorer],
-        target: workflow,
-        workflowConfig: {
-          workflow,
+        scorers: {
           stepScorers: {
             'test-step': [mockScorer],
           },
         },
+        target: workflow,
       });
 
       // Verify the scorer was called with step-specific data
@@ -473,18 +463,18 @@ describe('runExperiment', () => {
 
       const result = await runExperiment({
         data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
-        scorers: [mockScorer],
-        target: workflow,
-        workflowConfig: {
-          workflow,
+        scorers: {
+          workflow: [mockScorers[0]],
           stepScorers: {
             'test-step': [mockScorer],
           },
         },
+        target: workflow,
       });
 
       // Verify the experiment result includes step scorer results
-      expect(result.scores['step-scorer']).toBe(0.8);
+      expect(result.scores.steps?.[`test-step`]?.[`step-scorer`]).toBe(0.8);
+      expect(result.scores.workflow?.toxicity).toBe(0.9);
       expect(result.summary.totalItems).toBe(1);
     });
   });
