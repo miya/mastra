@@ -7927,12 +7927,6 @@ describe('MastraInngestWorkflow', () => {
           ],
           scorers: [mockScorers[0]],
           target: workflow,
-          workflowConfig: {
-            workflow,
-            stepScorers: {
-              'test-step': [mockScorers[0]],
-            },
-          },
         });
         srv.close();
         expect(result.scores.toxicity).toBe(0.9);
