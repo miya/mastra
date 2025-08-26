@@ -1,5 +1,22 @@
 # @mastra/dane
 
+## 0.0.46-alpha.3
+
+### Patch Changes
+
+- Updated dependencies [[`da58ccc`](https://github.com/mastra-ai/mastra/commit/da58ccc1f2ac33da0cb97b00443fc6208b45bdec)]:
+  - @mastra/memory@0.14.0-alpha.2
+  - @mastra/mcp@0.11.0-alpha.2
+  - @mastra/rag@1.2.0-alpha.1
+  - @mastra/core@0.15.0-alpha.3
+
+## 0.0.46-alpha.2
+
+### Patch Changes
+
+- Updated dependencies [[`2e58325`](https://github.com/mastra-ai/mastra/commit/2e58325beb170f5b92f856e27d915cd26917e5e6)]:
+  - @mastra/core@0.14.2-alpha.2
+
 ## 0.0.46-alpha.1
 
 ### Patch Changes
