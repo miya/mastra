@@ -34,8 +34,8 @@ export class ScoreAccumulator {
     }
 
     // Handle step-level scorers
-    if ('stepScorers' in scorerResults && scorerResults.stepScorers) {
-      for (const [stepId, stepResults] of Object.entries(scorerResults.stepScorers)) {
+    if ('steps' in scorerResults && scorerResults.steps) {
+      for (const [stepId, stepResults] of Object.entries(scorerResults.steps)) {
         if (!this.stepScores[stepId]) {
           this.stepScores[stepId] = {};
         }

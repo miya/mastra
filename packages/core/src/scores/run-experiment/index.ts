@@ -43,7 +43,7 @@ export type RunExperimentOnItemComplete = ({
 
 type WorkflowRunExperimentConfig = {
   workflow?: MastraScorer[];
-  stepScorers: {
+  steps: {
     [stepId: string]: MastraScorer[];
   };
 };
@@ -116,7 +116,7 @@ const validateExperimentInputs = <const TScorer extends readonly MastraScorer[]>
   if (
     (Array.isArray(scorers) && scorers.length === 0) ||
     ('workflow' in scorers && Array.isArray(scorers.workflow) && scorers.workflow.length === 0) ||
-    ('stepScorers' in scorers && Object.keys(scorers.stepScorers).length === 0)
+    ('steps' in scorers && Object.keys(scorers.steps).length === 0)
   ) {
     throw new MastraError({
       domain: 'SCORER',
@@ -268,7 +268,7 @@ const runScorers = async <const TScorer extends readonly MastraScorer[]>(
       }
     }
 
-    const workflowStepScorers = 'stepScorers' in scorers ? scorers.stepScorers : undefined;
+    const workflowStepScorers = 'steps' in scorers ? scorers.steps : undefined;
     const workflowStepScorerResults: Record<string, any> = {};
     if (workflowStepScorers) {
       for (const [stepId, stepScorers] of Object.entries(workflowStepScorers)) {
@@ -285,7 +285,7 @@ const runScorers = async <const TScorer extends readonly MastraScorer[]>(
     }
 
     if (Object.keys(workflowStepScorerResults).length > 0) {
-      scorerResults.stepScorers = workflowStepScorerResults;
+      scorerResults.steps = workflowStepScorerResults;
     }
   }
 

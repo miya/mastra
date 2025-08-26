@@ -142,10 +142,6 @@ describe('runExperiment', () => {
         data: testData,
         scorers: mockScorers,
         target: mockAgent,
-        onItemComplete: ({ targetResult }) => {
-          const { scoringData, ...rest } = targetResult;
-          console.log(`targetResult 123 `, rest);
-        },
       });
 
       expect(result.scores.toxicity).toBe(0.9);
@@ -389,7 +385,7 @@ describe('runExperiment', () => {
       await runExperiment({
         data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
         scorers: {
-          stepScorers: {
+          steps: {
             'test-step': [mockScorers[1]],
           },
         },
@@ -425,7 +421,7 @@ describe('runExperiment', () => {
       await runExperiment({
         data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
         scorers: {
-          stepScorers: {
+          steps: {
             'test-step': [mockScorer],
           },
         },
@@ -465,12 +461,14 @@ describe('runExperiment', () => {
         data: [{ input: { input: 'Test input' }, groundTruth: 'Expected' }],
         scorers: {
           workflow: [mockScorers[0]],
-          stepScorers: {
+          steps: {
             'test-step': [mockScorer],
           },
         },
         target: workflow,
       });
+
+      console.log(`result`, JSON.stringify(result, null, 2));
 
       // Verify the experiment result includes step scorer results
       expect(result.scores.steps?.[`test-step`]?.[`step-scorer`]).toBe(0.8);
