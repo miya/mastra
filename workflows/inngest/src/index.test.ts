@@ -6,9 +6,11 @@ import { realtimeMiddleware } from '@inngest/realtime';
 import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
 import { RuntimeContext } from '@mastra/core/runtime-context';
+import type { MastraScorer } from '@mastra/core/scores';
+import { createScorer, runExperiment } from '@mastra/core/scores';
 import { Telemetry } from '@mastra/core/telemetry';
 import { createTool } from '@mastra/core/tools';
-import type { StreamEvent, Workflow } from '@mastra/core/workflows';
+import type { StreamEvent } from '@mastra/core/workflows';
 import { createHonoServer } from '@mastra/deployer/server';
 import { DefaultStorage } from '@mastra/libsql';
 import { MockLanguageModelV1, simulateReadableStream } from 'ai/test';
@@ -18,7 +20,6 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { z } from 'zod';
 import { init, serve as inngestServe } from './index';
-import { createScorer, MastraScorer, runExperiment } from '@mastra/core/scores';
 
 interface LocalTestContext {
   inngestPort: number;
