@@ -307,7 +307,19 @@ async function runScorers(
               });
               stepResults[scorer.name] = score;
             } catch (error) {
-              console.error(`Error running scorer ${scorer.name} on step ${stepId}:`, error);
+              throw new MastraError(
+                {
+                  domain: 'SCORER',
+                  id: 'RUN_EXPERIMENT_SCORER_FAILED_TO_SCORE_STEP_RESULT',
+                  category: 'USER',
+                  text: `Failed to run experiment: Error running scorer ${scorer.name} on step ${stepId}`,
+                  details: {
+                    scorerName: scorer.name,
+                    stepId,
+                  },
+                },
+                error,
+              );
             }
           }
           if (Object.keys(stepResults).length > 0) {
