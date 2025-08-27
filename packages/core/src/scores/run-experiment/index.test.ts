@@ -103,37 +103,16 @@ describe('runExperiment', () => {
   });
 
   describe('Basic functionality', () => {
-    // it('should run experiment with single scorer', async () => {
-    //   const testPromise = new DelayedPromise();
+    it('should run experiment with single scorer', async () => {
+      const result = await runExperiment({
+        data: testData,
+        scorers: [createMockScorer('toxicity', 0.9)],
+        target: mockAgent,
+      });
 
-    //   const createMockScorer = (name: string, score: number = 0.8): MastraScorer => {
-    //     const scorer = createScorer({
-    //       description: 'Mock scorer',
-    //       name,
-    //     }).generateScore(() => {
-    //       console.log('Generating name', name, score);
-    //       testPromise.resolve({ name, score });
-    //       return score;
-    //     });
-
-    //     vi.spyOn(scorer, 'run');
-
-    //     return scorer;
-    //   };
-
-    //   const result = await runExperiment({
-    //     data: testData,
-    //     scorers: [createMockScorer('toxicity', 0.9)],
-    //     target: mockAgent,
-    //   });
-
-    //   const promiseResult = await testPromise.promise;
-
-    //   console.log(`promiseResult`, JSON.stringify(promiseResult, null, 2))
-
-    //   expect(result.scores.toxicity).toBe(0.9);
-    //   expect(result.summary.totalItems).toBe(2);
-    // });
+      expect(result.scores.toxicity).toBe(0.9);
+      expect(result.summary.totalItems).toBe(2);
+    });
 
     it('should run experiment with multiple scorers', async () => {
       const result = await runExperiment({
