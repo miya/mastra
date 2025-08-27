@@ -885,6 +885,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
             },
             writableStream,
           ),
+          // Disable scorers must be explicitly set to false they are on by default
           scorers: disableScorers === false ? undefined : step.scorers,
         });
 
@@ -1030,9 +1031,27 @@ export class DefaultExecutionEngine extends ExecutionEngine {
   }) {
     let scorersToUse = scorers;
     if (typeof scorersToUse === 'function') {
-      scorersToUse = await scorersToUse({
-        runtimeContext: runtimeContext,
-      });
+      try {
+        scorersToUse = await scorersToUse({
+          runtimeContext: runtimeContext,
+        });
+      } catch (error) {
+        const mastraError = new MastraError(
+          {
+            id: 'WORKFLOW_FAILED_TO_FETCH_SCORERS',
+            domain: 'MASTRA_WORKFLOW',
+            category: ErrorCategory.USER,
+            details: {
+              runId,
+              workflowId,
+              stepId,
+            },
+          },
+          error,
+        );
+        this.logger.trackException(mastraError);
+        this.logger.error(mastraError.toString(), error);
+      }
     }
 
     if (!disableScorers && scorersToUse && Object.keys(scorersToUse || {}).length > 0) {

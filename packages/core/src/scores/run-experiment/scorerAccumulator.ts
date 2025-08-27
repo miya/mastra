@@ -63,30 +63,36 @@ export class ScoreAccumulator {
   getAverageScores(): Record<string, any> {
     const result: Record<string, any> = {};
 
-    // Add flat scores (for backward compatibility)
     for (const [scorerName, scoreArray] of Object.entries(this.flatScores)) {
-      result[scorerName] = scoreArray.reduce((a, b) => a + b, 0) / scoreArray.length;
+      result[scorerName] = this.getAverageScore(scoreArray);
     }
 
     // Add workflow scores
     if (Object.keys(this.workflowScores).length > 0) {
       result.workflow = {};
       for (const [scorerName, scoreArray] of Object.entries(this.workflowScores)) {
-        result.workflow[scorerName] = scoreArray.reduce((a, b) => a + b, 0) / scoreArray.length;
+        result.workflow[scorerName] = this.getAverageScore(scoreArray);
       }
     }
 
-    // Add step scores
     if (Object.keys(this.stepScores).length > 0) {
       result.steps = {};
       for (const [stepId, stepScorers] of Object.entries(this.stepScores)) {
         result.steps[stepId] = {};
         for (const [scorerName, scoreArray] of Object.entries(stepScorers)) {
-          result.steps[stepId][scorerName] = scoreArray.reduce((a, b) => a + b, 0) / scoreArray.length;
+          result.steps[stepId][scorerName] = this.getAverageScore(scoreArray);
         }
       }
     }
 
     return result;
+  }
+
+  private getAverageScore(scoreArray: number[]): number {
+    if (scoreArray.length > 0) {
+      return scoreArray.reduce((a, b) => a + b, 0) / scoreArray.length;
+    } else {
+      return 0;
+    }
   }
 }

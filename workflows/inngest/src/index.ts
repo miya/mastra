@@ -1638,20 +1638,22 @@ export class InngestExecutionEngine extends DefaultExecutionEngine {
       return { result: execResults, executionContext, stepResults };
     });
 
-    await this.inngestStep.run(`workflow.${executionContext.workflowId}.step.${step.id}.score`, async () => {
-      if (step.scorers) {
-        this.runScorers({
-          scorers: step.scorers,
-          runId: executionContext.runId,
-          input: prevOutput,
-          output: stepRes.result,
-          workflowId: executionContext.workflowId,
-          stepId: step.id,
-          runtimeContext,
-          disableScorers,
-        });
-      }
-    });
+    if (disableScorers !== false) {
+      await this.inngestStep.run(`workflow.${executionContext.workflowId}.step.${step.id}.score`, async () => {
+        if (step.scorers) {
+          this.runScorers({
+            scorers: step.scorers,
+            runId: executionContext.runId,
+            input: prevOutput,
+            output: stepRes.result,
+            workflowId: executionContext.workflowId,
+            stepId: step.id,
+            runtimeContext,
+            disableScorers,
+          });
+        }
+      });
+    }
 
     // @ts-ignore
     Object.assign(executionContext.suspendedPaths, stepRes.executionContext.suspendedPaths);
