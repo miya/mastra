@@ -2,10 +2,10 @@ import type { CoreMessage } from 'ai';
 import type { Agent, AiMessageType, UIMessageWithMetadata } from '../../agent';
 import { MastraError } from '../../error';
 import type { RuntimeContext } from '../../runtime-context';
-import { Workflow, type WorkflowResult } from '../../workflows';
+import { Workflow } from '../../workflows';
+import type { WorkflowResult, StepResult } from '../../workflows';
 import type { MastraScorer } from '../base';
 import { ScoreAccumulator } from './scorerAccumulator';
-import type { StepResult } from '../../workflows';
 
 type RunExperimentDataItem<TTarget = unknown> = {
   input: TTarget extends Workflow<any, any>

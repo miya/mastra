@@ -1,15 +1,13 @@
 import { MockLanguageModelV1 } from 'ai/test';
 import { convertArrayToReadableStream, MockLanguageModelV2 } from 'ai-v5/test';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { z } from 'zod';
 import { Agent } from '../../agent';
 import { RuntimeContext } from '../../runtime-context';
+import { createWorkflow, createStep } from '../../workflows';
 import { createScorer } from '../base';
 import type { MastraScorer } from '../base';
 import { runExperiment } from '.';
-import { createWorkflow, createStep } from '../../workflows';
-import { z } from 'zod';
-import { scoreResultSchema } from '../types';
-import { DelayedPromise } from '../../stream/aisdk/v5/compat';
 
 const createMockScorer = (name: string, score: number = 0.8): MastraScorer => {
   const scorer = createScorer({

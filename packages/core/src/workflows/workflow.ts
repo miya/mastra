@@ -11,7 +11,6 @@ import { MastraBase } from '../base';
 import { RuntimeContext } from '../di';
 import { RegisteredLogger } from '../logger';
 import type { MastraScorers } from '../scores';
-import { runScorer } from '../scores/hooks';
 import { MastraWorkflowStream } from '../stream/MastraWorkflowStream';
 import type { ChunkType } from '../stream/types';
 import { ChunkFrom } from '../stream/types';
@@ -21,7 +20,7 @@ import type { DynamicArgument } from '../types';
 import { EMITTER_SYMBOL } from './constants';
 import { DefaultExecutionEngine } from './default';
 import type { ExecutionEngine, ExecutionGraph } from './execution-engine';
-import type { ExecuteFunction, ExecuteFunctionParams, Step } from './step';
+import type { ExecuteFunction, Step } from './step';
 import type {
   DefaultEngineType,
   DynamicMapping,

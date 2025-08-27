@@ -889,7 +889,7 @@ export class DefaultExecutionEngine extends ExecutionEngine {
         });
 
         if (step.scorers) {
-          this.runScorers({
+          await this.runScorers({
             scorers: step.scorers,
             runId,
             input: prevOutput,
