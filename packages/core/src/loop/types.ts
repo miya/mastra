@@ -22,6 +22,7 @@ export type LoopConfig = {
   onAbort?: (event: any) => Promise<void> | void;
   activeTools?: Array<keyof ToolSet> | undefined;
   abortSignal?: AbortSignal;
+  returnScorerData?: boolean;
 };
 
 export type LoopOptions<Tools extends ToolSet = ToolSet, OUTPUT extends OutputSchema | undefined = undefined> = {
@@ -45,6 +46,7 @@ export type LoopOptions<Tools extends ToolSet = ToolSet, OUTPUT extends OutputSc
   stopWhen?: StopCondition<NoInfer<Tools>> | Array<StopCondition<NoInfer<Tools>>>;
   _internal?: StreamInternal;
   output?: OUTPUT;
+  returnScorerData?: boolean;
 };
 
 export type LoopRun<Tools extends ToolSet = ToolSet, OUTPUT extends OutputSchema | undefined = undefined> = LoopOptions<

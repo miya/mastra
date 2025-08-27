@@ -131,6 +131,7 @@ export class MastraLLMVNext extends MastraBase {
     output,
     options,
     outputProcessors,
+    returnScorerData,
     // ...rest
   }: ModelLoopStreamArgs<Tools, OUTPUT>): MastraModelOutput<OUTPUT | undefined> {
     const model = this.#model;
@@ -166,6 +167,7 @@ export class MastraLLMVNext extends MastraBase {
         },
         output,
         outputProcessors,
+        returnScorerData,
         options: {
           ...options,
           onStepFinish: async props => {
