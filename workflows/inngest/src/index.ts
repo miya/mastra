@@ -1638,7 +1638,7 @@ export class InngestExecutionEngine extends DefaultExecutionEngine {
       return { result: execResults, executionContext, stepResults };
     });
 
-    this.inngestStep.run(`workflow.${executionContext.workflowId}.step.${step.id}.score`, async () => {
+    await this.inngestStep.run(`workflow.${executionContext.workflowId}.step.${step.id}.score`, async () => {
       if (step.scorers) {
         this.runScorers({
           scorers: step.scorers,
