@@ -6180,6 +6180,27 @@ function agentTests({ version }: { version: 'v1' | 'v2' }) {
       expect(result.scoringData.output).toBeInstanceOf(Array);
     });
 
+    it(`${version} - should not return scoring data from generate when returnScorerData is false`, async () => {
+      const agent = new Agent({
+        name: 'Scorer Agent',
+        instructions: 'You are an agent that can score things',
+        model: dummyModel,
+      });
+
+      let result;
+      if (version === 'v1') {
+        result = await agent.generate('Make it green', {
+          returnScorerData: false,
+        });
+      } else {
+        result = await agent.generateVNext('Make it green', {
+          returnScorerData: false,
+        });
+      }
+
+      expect(result.scoringData).toBeUndefined();
+    });
+
     it(`${version} - should not return scoring data from generate when returnScorerData is not specified`, async () => {
       const agent = new Agent({
         name: 'Scorer Agent',
