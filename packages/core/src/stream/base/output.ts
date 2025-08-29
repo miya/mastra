@@ -11,6 +11,7 @@ import { MastraBase } from '../../base';
 import type { OutputProcessor } from '../../processors';
 import type { ProcessorState } from '../../processors/runner';
 import { ProcessorRunner } from '../../processors/runner';
+import type { ScorerRunInputForAgent, ScorerRunOutputForAgent } from '../../scores';
 import { DelayedPromise } from '../aisdk/v5/compat';
 import type { ConsumeStreamOptions } from '../aisdk/v5/compat';
 import { AISDKV5OutputStream } from '../aisdk/v5/output';
@@ -19,7 +20,6 @@ import type { BufferedByStep, ChunkType, StepBufferItem } from '../types';
 import { createJsonTextStreamTransformer, createObjectStreamTransformer } from './output-format-handlers';
 import { getTransformedSchema } from './schema';
 import type { InferSchemaOutput, OutputSchema, PartialSchemaOutput } from './schema';
-import type { ScorerRunInputForAgent, ScorerRunOutputForAgent } from '../../scores';
 
 export class JsonToSseTransformStream extends TransformStream<unknown, string> {
   constructor() {

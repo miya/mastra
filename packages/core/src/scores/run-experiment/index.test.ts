@@ -145,7 +145,7 @@ describe('runExperiment', () => {
   describe('V2 Agent integration', () => {
     it('should call agent.generate with correct parameters', async () => {
       const mockAgent = createMockAgentV2();
-      const result = await runExperiment({
+      await runExperiment({
         data: [{ input: 'test input', groundTruth: 'truth' }],
         scorers: mockScorers,
         target: mockAgent,
