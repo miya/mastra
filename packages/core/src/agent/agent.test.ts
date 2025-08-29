@@ -6151,7 +6151,7 @@ function agentTests({ version }: { version: 'v1' | 'v2' }) {
     }
   }, 10000);
 
-  describe.only('scorer', () => {
+  describe('scorer', () => {
     it(`${version} - should return scoring data from generate when returnScorerData is true`, async () => {
       const agent = new Agent({
         name: 'Scorer Agent',
