@@ -641,4 +641,13 @@ export class MastraClient extends BaseResource {
   getAITraces(params: AITracesPaginatedArg): Promise<GetAITracesResponse> {
     return this.observability.getTraces(params);
   }
+
+  getFileContentType(url: string): Promise<{ contentType: string }> {
+    return this.request(`/api/files/content-type`, {
+      method: 'POST',
+      body: {
+        url,
+      },
+    });
+  }
 }
