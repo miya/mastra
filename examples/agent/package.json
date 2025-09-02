@@ -13,7 +13,6 @@
     "@mastra/core": "latest",
     "@mastra/evals": "latest",
     "@mastra/libsql": "latest",
-    "@mastra/agent-builder": "latest",
     "@mastra/loggers": "latest",
     "@mastra/mcp": "latest",
     "@mastra/memory": "latest",
@@ -34,7 +33,6 @@
       "@mastra/client-js": "link:../../client-sdks/client-js",
       "@mastra/mcp": "link:../../packages/mcp",
       "@mastra/libsql": "link:../../stores/libsql",
-      "@mastra/agent-builder": "link:../../packages/agent-builder",
       "@mastra/evals": "link:../../packages/evals",
       "mastra": "link:../../packages/cli"
     }
