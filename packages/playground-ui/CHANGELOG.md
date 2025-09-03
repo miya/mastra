@@ -1,5 +1,15 @@
 # @mastra/playground-ui
 
+## 6.0.0-alpha.4
+
+### Patch Changes
+
+- [#7351](https://github.com/mastra-ai/mastra/pull/7351) [`572acd0`](https://github.com/mastra-ai/mastra/commit/572acd0919479455ee654753877f2c1564d0b29e) Thanks [@dane-ai-mastra](https://github.com/apps/dane-ai-mastra)! - dependencies updates:
+  - Updated dependency [`@assistant-ui/react@^0.10.45` ↗︎](https://www.npmjs.com/package/@assistant-ui/react/v/0.10.45) (from `^0.10.44`, in `dependencies`)
+- Updated dependencies [[`c19bcf7`](https://github.com/mastra-ai/mastra/commit/c19bcf7b43542b02157b5e17303e519933a153ab), [`45e4d39`](https://github.com/mastra-ai/mastra/commit/45e4d391a2a09fc70c48e4d60f505586ada1ba0e), [`74db265`](https://github.com/mastra-ai/mastra/commit/74db265b96aa01a72ffd91dcae0bc3b346cca0f2), [`7f3b8da`](https://github.com/mastra-ai/mastra/commit/7f3b8da6dd21c35d3672e44b4f5dd3502b8f8f92)]:
+  - @mastra/core@0.15.3-alpha.6
+  - @mastra/client-js@0.11.3-alpha.6
+
 ## 6.0.0-alpha.3
 
 ### Patch Changes

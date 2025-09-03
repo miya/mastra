@@ -1,5 +1,13 @@
 # @mastra/memory-integration-tests-v5
 
+## 0.1.6-alpha.4
+
+### Patch Changes
+
+- Updated dependencies [[`c19bcf7`](https://github.com/mastra-ai/mastra/commit/c19bcf7b43542b02157b5e17303e519933a153ab), [`a5632dd`](https://github.com/mastra-ai/mastra/commit/a5632dd316a6246666662705404bda570b070af1), [`45e4d39`](https://github.com/mastra-ai/mastra/commit/45e4d391a2a09fc70c48e4d60f505586ada1ba0e), [`74db265`](https://github.com/mastra-ai/mastra/commit/74db265b96aa01a72ffd91dcae0bc3b346cca0f2), [`7f3b8da`](https://github.com/mastra-ai/mastra/commit/7f3b8da6dd21c35d3672e44b4f5dd3502b8f8f92)]:
+  - @mastra/core@0.15.3-alpha.6
+  - @mastra/memory@0.14.3-alpha.3
+
 ## 0.1.6-alpha.3
 
 ### Patch Changes

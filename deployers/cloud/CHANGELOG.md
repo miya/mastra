@@ -1,5 +1,15 @@
 # @mastra/deployer-cloud
 
+## 0.15.3-alpha.6
+
+### Patch Changes
+
+- [#7040](https://github.com/mastra-ai/mastra/pull/7040) [`855135e`](https://github.com/mastra-ai/mastra/commit/855135e2a746742a3da8745a3c7d701b5d43d812) Thanks [@dane-ai-mastra](https://github.com/apps/dane-ai-mastra)! - dependencies updates:
+  - Updated dependency [`redis@^5.8.2` ↗︎](https://www.npmjs.com/package/redis/v/5.8.2) (from `^5.8.0`, in `dependencies`)
+- Updated dependencies [[`c19bcf7`](https://github.com/mastra-ai/mastra/commit/c19bcf7b43542b02157b5e17303e519933a153ab), [`45e4d39`](https://github.com/mastra-ai/mastra/commit/45e4d391a2a09fc70c48e4d60f505586ada1ba0e), [`74db265`](https://github.com/mastra-ai/mastra/commit/74db265b96aa01a72ffd91dcae0bc3b346cca0f2), [`7f3b8da`](https://github.com/mastra-ai/mastra/commit/7f3b8da6dd21c35d3672e44b4f5dd3502b8f8f92)]:
+  - @mastra/core@0.15.3-alpha.6
+  - @mastra/deployer@0.15.3-alpha.6
+
 ## 0.15.3-alpha.5
 
 ### Patch Changes

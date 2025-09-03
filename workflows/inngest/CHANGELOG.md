@@ -1,5 +1,14 @@
 # @mastra/inngest
 
+## 0.12.3-alpha.4
+
+### Patch Changes
+
+- [#7355](https://github.com/mastra-ai/mastra/pull/7355) [`7f3b8da`](https://github.com/mastra-ai/mastra/commit/7f3b8da6dd21c35d3672e44b4f5dd3502b8f8f92) Thanks [@rase-](https://github.com/rase-)! - Automatically pipe writer to workflows as a tool.
+  Also changed start, finish, step-output events to be workflow-start, workflow-finish and workflow-step-output
+- Updated dependencies [[`c19bcf7`](https://github.com/mastra-ai/mastra/commit/c19bcf7b43542b02157b5e17303e519933a153ab), [`45e4d39`](https://github.com/mastra-ai/mastra/commit/45e4d391a2a09fc70c48e4d60f505586ada1ba0e), [`74db265`](https://github.com/mastra-ai/mastra/commit/74db265b96aa01a72ffd91dcae0bc3b346cca0f2), [`7f3b8da`](https://github.com/mastra-ai/mastra/commit/7f3b8da6dd21c35d3672e44b4f5dd3502b8f8f92)]:
+  - @mastra/core@0.15.3-alpha.6
+
 ## 0.12.3-alpha.3
 
 ### Patch Changes

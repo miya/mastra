@@ -1,5 +1,17 @@
 # mastra
 
+## 0.11.3-alpha.4
+
+### Patch Changes
+
+- [#7358](https://github.com/mastra-ai/mastra/pull/7358) [`2f55297`](https://github.com/mastra-ai/mastra/commit/2f552975f4eb602f24c9e811c18587a65f620d72) Thanks [@LekoArts](https://github.com/LekoArts)! - Fix issue when using `yarn dlx create-mastra`
+
+- [#7357](https://github.com/mastra-ai/mastra/pull/7357) [`01264f1`](https://github.com/mastra-ai/mastra/commit/01264f1280db040d1bd1ac9b8d29cfcaac3d6cbc) Thanks [@TheIsrael1](https://github.com/TheIsrael1)! - Mastra dev- load env vars before watch
+
+- Updated dependencies [[`c19bcf7`](https://github.com/mastra-ai/mastra/commit/c19bcf7b43542b02157b5e17303e519933a153ab), [`45e4d39`](https://github.com/mastra-ai/mastra/commit/45e4d391a2a09fc70c48e4d60f505586ada1ba0e), [`74db265`](https://github.com/mastra-ai/mastra/commit/74db265b96aa01a72ffd91dcae0bc3b346cca0f2), [`7f3b8da`](https://github.com/mastra-ai/mastra/commit/7f3b8da6dd21c35d3672e44b4f5dd3502b8f8f92)]:
+  - @mastra/core@0.15.3-alpha.6
+  - @mastra/deployer@0.15.3-alpha.6
+
 ## 0.11.3-alpha.3
 
 ### Patch Changes

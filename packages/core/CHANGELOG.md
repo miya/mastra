@@ -1,5 +1,20 @@
 # @mastra/core
 
+## 0.15.3-alpha.6
+
+### Patch Changes
+
+- [#7361](https://github.com/mastra-ai/mastra/pull/7361) [`c19bcf7`](https://github.com/mastra-ai/mastra/commit/c19bcf7b43542b02157b5e17303e519933a153ab) Thanks [@epinzur](https://github.com/epinzur)! - stopped recording event spans for llm_chunks in ai-observability
+
+- [#7350](https://github.com/mastra-ai/mastra/pull/7350) [`45e4d39`](https://github.com/mastra-ai/mastra/commit/45e4d391a2a09fc70c48e4d60f505586ada1ba0e) Thanks [@LekoArts](https://github.com/LekoArts)! - Try fixing the `Attempted import error: 'z'.'toJSONSchema' is not exported from 'zod'` error by tricking the compiler
+
+- [#7353](https://github.com/mastra-ai/mastra/pull/7353) [`74db265`](https://github.com/mastra-ai/mastra/commit/74db265b96aa01a72ffd91dcae0bc3b346cca0f2) Thanks [@epinzur](https://github.com/epinzur)! - Adds handling for event-type spans to the default ai observability exporter
+
+- [#7355](https://github.com/mastra-ai/mastra/pull/7355) [`7f3b8da`](https://github.com/mastra-ai/mastra/commit/7f3b8da6dd21c35d3672e44b4f5dd3502b8f8f92) Thanks [@rase-](https://github.com/rase-)! - Automatically pipe writer to workflows as a tool.
+  Also changed start, finish, step-output events to be workflow-start, workflow-finish and workflow-step-output
+- Updated dependencies [[`45e4d39`](https://github.com/mastra-ai/mastra/commit/45e4d391a2a09fc70c48e4d60f505586ada1ba0e)]:
+  - @mastra/schema-compat@0.11.2-alpha.3
+
 ## 0.15.3-alpha.5
 
 ### Patch Changes
