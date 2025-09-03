@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils';
 import {
-  BrainIcon,
   ChevronFirstIcon,
   ChevronLastIcon,
   ChevronsLeftRight,
@@ -9,37 +8,12 @@ import {
   TimerIcon,
 } from 'lucide-react';
 import * as HoverCard from '@radix-ui/react-hover-card';
-import { KeyValueList, UISpan } from '@mastra/playground-ui';
-import { Link } from 'react-router';
+import { KeyValueList } from '@/components/ui/elements';
+import { type UISpan } from '../types';
 import { format } from 'date-fns/format';
 import { useState } from 'react';
-
-type TreeSymbolProps = {
-  isLastChild?: boolean;
-  isNextToLastChild?: boolean;
-  isFirstChild?: boolean;
-  hasChildren?: boolean;
-};
-
-function TreePositionMark({ isLastChild, isNextToLastChild, hasChildren }: TreeSymbolProps & { hasChildren: boolean }) {
-  return (
-    <div
-      className={cn(
-        'w-[1.5rem] h-[2.2rem] relative opacity-25 ',
-        'after:content-[""] after:absolute after:left-0 after:top-0 after:bottom-0 after:w-[0px] after:border-r-[0.5px] after:border-white after:border-dashed',
-        'before:content-[""] before:absolute before:left-0  before:top-[50%] before:w-full before:h-[0px] before:border-b-[0.5px] before:border-white before:border-dashed',
-        {
-          'after:bottom-[50%]': isLastChild,
-          //     'after:bg-gray-500 after:bottom-auto after:h-[200rem] ': isNextToLastChild,
-        },
-      )}
-    >
-      {hasChildren && (
-        <div className="absolute -right-[1px] top-[50%] bottom-0 w-[0px]  border-r-[0.5px] border-white border-dashed" />
-      )}
-    </div>
-  );
-}
+import { getSpanTypeUi } from './shared';
+import { useLinkComponent } from '@/lib/framework';
 
 type TraceTreeSpanProps = {
   span: UISpan;
@@ -64,6 +38,7 @@ export function TraceTreeSpan({
   overallLatency,
   overallStartTime,
 }: TraceTreeSpanProps) {
+  const { Link } = useLinkComponent();
   const [isHovered, setIsHovered] = useState(false);
   const hasChildren = span.spans && span.spans.length > 0;
   const isRootSpan = depth === 0;
@@ -73,6 +48,7 @@ export function TraceTreeSpan({
   const spanStartTimeShift =
     spanStartTimeDate && overallStartTimeDate ? spanStartTimeDate.getTime() - overallStartTimeDate.getTime() : 0;
   const percentageSpanStartTime = overallLatency && Math.floor((spanStartTimeShift / overallLatency) * 100);
+  const spanUI = getSpanTypeUi(span?.type);
 
   return (
     <>
@@ -101,14 +77,12 @@ export function TraceTreeSpan({
               hasChildren={Boolean(hasChildren)}
             />
           )}
-          <div
-            className={cn(
-              'text-[0.875rem] flex items-center gap-[0.5rem] text-[#fff]  w-full',
-              '[&>svg]:w-[1.25em] [&>svg]:h-[1.25em] [&>svg]:shrink-0  [&>svg]:text-accent1 ',
-              '[&>svg]:text-[#855fa9]',
+          <div className={cn('text-[0.875rem] flex items-center text-left break-all gap-[0.5rem] text-[#fff]  w-full')}>
+            {spanUI?.icon && (
+              <span className="[&>svg]:w-[1.25em] [&>svg]:h-[1.25em] [&>svg]:shrink-0" style={{ color: spanUI?.color }}>
+                {spanUI?.icon}
+              </span>
             )}
-          >
-            {span.type === 'GENERATION' && <BrainIcon />}
             {span.name}
           </div>
         </div>
@@ -132,20 +106,31 @@ export function TraceTreeSpan({
             <span
               className={cn(
                 'absolute flex pt-[0.1rem]  items-center gap-[0.5rem] text-icon5',
-                '[&>svg]:w-[1.25em] [&>svg]:h-[1.25em] [&>svg]:shrink-0 [&>svg]:opacity-50',
+                '[&>svg]:w-[1.25em] [&>svg]:h-[1.25em] [&>svg]:shrink-0 [&>svg]:opacity-50 mb-[0.1em] [&>svg]:mb-[0.1rem]',
               )}
               style={{ width: `${percentageSpanLatency}%`, left: `${percentageSpanStartTime}%` }}
             >
-              <ChevronsLeftRight /> {(span.latency / 1000).toFixed(2)}&nbsp;s
+              <ChevronsLeftRight />
+              <span
+                style={{
+                  transform:
+                    percentageSpanStartTime && percentageSpanStartTime > 70
+                      ? 'translateX(calc((100% + 2rem) * -1)'
+                      : 'none',
+                }}
+              >
+                {(span.latency / 1000).toFixed(2)}&nbsp;s
+              </span>
             </span>
           </div>
           <div className="relative w-full bg-surface5  h-[3px] ">
             <div
-              className={cn('bg-icon1 h-full absolute rounded-full', {
-                'bg-accent1': span.type === 'GENERATION',
-                'bg-[#855fa9]': span.type === 'GENERATION',
-              })}
-              style={{ width: `${percentageSpanLatency}%`, left: `${percentageSpanStartTime}%` }}
+              className={cn('bg-icon1 h-full absolute rounded-full', {})}
+              style={{
+                width: `${percentageSpanLatency}%`,
+                left: `${percentageSpanStartTime}%`,
+                backgroundColor: spanUI?.color,
+              }}
             ></div>
           </div>
         </HoverCard.Trigger>
@@ -220,5 +205,32 @@ export function TraceTreeSpan({
           );
         })}
     </>
+  );
+}
+
+type TreeSymbolProps = {
+  isLastChild?: boolean;
+  isNextToLastChild?: boolean;
+  isFirstChild?: boolean;
+  hasChildren?: boolean;
+};
+
+function TreePositionMark({ isLastChild, isNextToLastChild, hasChildren }: TreeSymbolProps & { hasChildren: boolean }) {
+  return (
+    <div
+      className={cn(
+        'w-[1.5rem] h-[2.2rem] relative opacity-50 ',
+        'after:content-[""] after:absolute after:left-0 after:top-0 after:bottom-0 after:w-[0px] after:border-r-[0.5px] after:border-white after:border-dashed',
+        'before:content-[""] before:absolute before:left-0  before:top-[50%] before:w-full before:h-[0px] before:border-b-[0.5px] before:border-white before:border-dashed',
+        {
+          'after:bottom-[50%]': isLastChild,
+          //     'after:bg-gray-500 after:bottom-auto after:h-[200rem] ': isNextToLastChild,
+        },
+      )}
+    >
+      {hasChildren && (
+        <div className="absolute -right-[1px] top-[50%] bottom-0 w-[0px]  border-r-[0.5px] border-white border-dashed" />
+      )}
+    </div>
   );
 }

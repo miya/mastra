@@ -5,7 +5,7 @@ import { XIcon } from 'lucide-react';
 
 export type EntityOptions = { value: string; label: string; type: 'agent' | 'workflow' | 'all' };
 
-type ObservabilityTracesToolsProps = {
+type TracesToolsProps = {
   selectedEntity?: EntityOptions;
   entityOptions?: EntityOptions[];
   onEntityChange: (val: EntityOptions) => void;
@@ -15,7 +15,7 @@ type ObservabilityTracesToolsProps = {
   onDateChange?: (value: Date | undefined, type: 'from' | 'to') => void;
 };
 
-export function ObservabilityTracesTools({
+export function TracesTools({
   onEntityChange,
   onReset,
   selectedEntity,
@@ -23,7 +23,7 @@ export function ObservabilityTracesTools({
   onDateChange,
   selectedDateFrom,
   selectedDateTo,
-}: ObservabilityTracesToolsProps) {
+}: TracesToolsProps) {
   return (
     <div className={cn('flex flex-wrap gap-x-[2rem] gap-y-[1rem]')}>
       <SelectField
