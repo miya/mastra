@@ -241,6 +241,11 @@ async function rebundleAndRestart(
 
     const env = await bundler.loadEnvVars();
 
+    // spread env into process.env
+    for (const [key, value] of env.entries()) {
+      process.env[key] = value;
+    }
+
     await startServer(
       join(dotMastraPath, 'output'),
       {
@@ -295,7 +300,13 @@ export async function dev({
   const bundler = new DevBundler(env);
   bundler.__setLogger(logger); // Keep Pino logger for internal bundler operations
 
-  // Get the port to use before prepare to set environment variables
+  const loadedEnv = await bundler.loadEnvVars();
+
+  // spread loadedEnv into process.env
+  for (const [key, value] of loadedEnv.entries()) {
+    process.env[key] = value;
+  }
+
   const serverOptions = await getServerOptions(entryFile, join(dotMastraPath, 'output'));
   let portToUse = port ?? serverOptions?.port ?? process.env.PORT;
   let hostToUse = serverOptions?.host ?? process.env.HOST ?? 'localhost';
@@ -311,13 +322,6 @@ export async function dev({
   await bundler.prepare(dotMastraPath);
 
   const watcher = await bundler.watch(entryFile, dotMastraPath, discoveredTools);
-
-  const loadedEnv = await bundler.loadEnvVars();
-
-  // spread loadedEnv into process.env
-  for (const [key, value] of loadedEnv.entries()) {
-    process.env[key] = value;
-  }
 
   await startServer(
     join(dotMastraPath, 'output'),
