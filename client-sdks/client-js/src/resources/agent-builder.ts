@@ -382,8 +382,11 @@ export class AgentBuilder extends BaseResource {
    * and streams any remaining progress.
    * This calls `/api/agent-builder/:actionId/watch`.
    */
-  async watch({ runId }: { runId: string }, onRecord: (record: { type: string; payload: any }) => void) {
-    const url = `/api/agent-builder/${this.actionId}/watch?runId=${runId}`;
+  async watch(
+    { runId, eventType }: { runId: string; eventType?: 'watch' | 'watch-v2' },
+    onRecord: (record: { type: string; payload: any }) => void,
+  ) {
+    const url = `/api/agent-builder/${this.actionId}/watch?runId=${runId}&eventType=${eventType}`;
     const response: Response = await this.request(url, {
       method: 'GET',
       stream: true,

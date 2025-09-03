@@ -290,8 +290,17 @@ export default function Template() {
     }));
   };
 
-  console.log('🔍 Installation result:', installationResult);
-  console.log('🔍 Watch installation result:', watchInstallationResult);
+  console.log({
+    installationResult,
+    watchInstallationResult,
+    isStreaming,
+    isWatching,
+    success,
+    failure,
+    currentRunId,
+    hasAutoResumed,
+    isFreshInstall,
+  });
 
   return (
     <MainContentLayout>
