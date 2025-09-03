@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { TemplateInstallationRequest, TemplateInstallationResult } from '@mastra/client-js';
+import { TemplateInstallationRequest } from '@mastra/client-js';
 import type { RuntimeContext } from '@mastra/core/runtime-context';
 import { client } from '@/lib/client';
 import { useState } from 'react';
@@ -198,9 +198,8 @@ const processTemplateInstallRecord = (
   record: { type: string; payload: any; runId?: string; eventTimestamp?: string },
   currentState: any,
   workflowInfo?: any,
-): { newState: any; installationResult?: TemplateInstallationResult } => {
+): { newState: any } => {
   let newState = { ...currentState };
-  let installationResult: TemplateInstallationResult | undefined;
 
   // Initialize steps if not present or empty
   const hasSteps =
@@ -322,7 +321,6 @@ const processTemplateInstallRecord = (
   }
 
   if (record.type === 'finish') {
-    const finalResult = record.payload.result;
     newState = {
       ...newState,
       status: record.payload.status,
@@ -337,20 +335,6 @@ const processTemplateInstallRecord = (
       },
       completedAt: new Date(),
     };
-
-    // Transform final result
-    if (finalResult) {
-      installationResult = {
-        success: finalResult.success || false,
-        applied: finalResult.applied || false,
-        branchName: finalResult.branchName,
-        message: finalResult.message || 'Template installation completed',
-        validationResults: finalResult.validationResults,
-        error: finalResult.error,
-        errors: finalResult.errors,
-        stepResults: finalResult.stepResults,
-      };
-    }
   }
 
   if (record.type === 'error') {
@@ -370,7 +354,7 @@ const processTemplateInstallRecord = (
     };
   }
 
-  return { newState, installationResult };
+  return { newState };
 };
 
 // Shared localStorage helpers for template installation state
@@ -411,22 +395,13 @@ const restoreTemplateStateFromLocalStorage = (runId: string) => {
 
 export const useWatchTemplateInstall = (workflowInfo?: any) => {
   const [streamResult, setStreamResult] = useState<any>({});
-  const [installationResult, setInstallationResult] = useState<TemplateInstallationResult | null>(null);
 
   // Use debouncing like workflows (prevents excessive re-renders)
   // Process each record immediately - no debouncing for watch events
   // (Watch events are already discrete and we can't afford to lose step completion events)
   const processTemplateRecord = (record: { type: string; payload: any; runId?: string; eventTimestamp?: string }) => {
     setStreamResult((currentState: any) => {
-      const { newState, installationResult: newResult } = processTemplateInstallRecord(
-        record,
-        currentState,
-        workflowInfo,
-      );
-
-      if (newResult) {
-        setInstallationResult(newResult);
-      }
+      const { newState } = processTemplateInstallRecord(record, currentState, workflowInfo);
 
       // Save to localStorage for refresh recovery
       if (record.runId) {
@@ -476,7 +451,6 @@ export const useWatchTemplateInstall = (workflowInfo?: any) => {
         try {
           // Initialize state with hybrid approach
           await initializeState(runId);
-          setInstallationResult(null);
 
           const template = client.getAgentBuilderAction('merge-template');
 
@@ -525,7 +499,6 @@ export const useWatchTemplateInstall = (workflowInfo?: any) => {
   return {
     watchInstall,
     streamResult,
-    installationResult,
   };
 };
 
@@ -533,12 +506,10 @@ export const useWatchTemplateInstall = (workflowInfo?: any) => {
 const useTemplateStreamProcessor = (workflowInfo?: any, runId?: string) => {
   const [streamResult, setStreamResult] = useState<any>({});
   const [isStreaming, setIsStreaming] = useState(false);
-  const [installationResult, setInstallationResult] = useState<TemplateInstallationResult | null>(null);
 
   const processStream = async (stream: any, initialRunId?: string) => {
     setIsStreaming(true);
     setStreamResult({});
-    setInstallationResult(null);
 
     if (!stream) throw new Error('No stream returned');
 
@@ -560,25 +531,8 @@ const useTemplateStreamProcessor = (workflowInfo?: any, runId?: string) => {
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) {
-          // Handle final state if no result yet
-          if (!installationResult) {
-            const { installationResult: finalResult } = processTemplateInstallRecord(
-              { type: 'finish', payload: { status: 'success' } },
-              currentState,
-              workflowInfo,
-            );
-            if (finalResult) setInstallationResult(finalResult);
-          }
-          break;
-        }
-
-        // ✅ REUSE THE EXISTING LOGIC!
-        const { newState, installationResult: newResult } = processTemplateInstallRecord(
-          value,
-          currentState,
-          workflowInfo,
-        );
+        if (done) break;
+        const { newState } = processTemplateInstallRecord(value, currentState, workflowInfo);
 
         currentState = newState;
         setStreamResult(newState);
@@ -587,10 +541,6 @@ const useTemplateStreamProcessor = (workflowInfo?: any, runId?: string) => {
         if (value.runId || initialRunId || runId) {
           const effectiveRunId = value.runId || initialRunId || runId;
           saveTemplateStateToLocalStorage(effectiveRunId, newState);
-        }
-
-        if (newResult) {
-          setInstallationResult(newResult);
         }
       }
     } catch (error) {
@@ -613,13 +563,12 @@ const useTemplateStreamProcessor = (workflowInfo?: any, runId?: string) => {
   return {
     streamResult,
     isStreaming,
-    installationResult,
     processStream,
   };
 };
 
 export const useStreamTemplateInstall = (workflowInfo?: any) => {
-  const { streamResult, isStreaming, installationResult, processStream } = useTemplateStreamProcessor(workflowInfo);
+  const { streamResult, isStreaming, processStream } = useTemplateStreamProcessor(workflowInfo);
 
   const streamInstall = useMutation({
     mutationFn: async ({
@@ -671,6 +620,5 @@ export const useStreamTemplateInstall = (workflowInfo?: any) => {
     streamInstall,
     streamResult,
     isStreaming,
-    installationResult,
   };
 };
