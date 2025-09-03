@@ -326,6 +326,7 @@ export default function Template() {
             imageURL={template?.imageURL}
             githubUrl={template?.githubUrl}
             infoData={templateInfoData}
+            templateSlug={templateSlug}
           />
           {template && (
             <>
