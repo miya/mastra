@@ -260,9 +260,7 @@ export default function Template() {
         };
 
         // Step 1: Create the template installation run
-        const { runId } = await createTemplateInstallRun({
-          params: { inputData: templateParams },
-        });
+        const { runId } = await createTemplateInstallRun({});
 
         setCurrentRunId(runId);
 

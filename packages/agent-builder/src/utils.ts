@@ -412,7 +412,10 @@ export async function renameAndCopyFile(sourceFile: string, targetFile: string):
 }
 
 // Helper function to resolve the model to use
-export const resolveModel = (runtimeContext: RuntimeContext): MastraLanguageModel => {
+export const resolveModel = (
+  runtimeContext: RuntimeContext,
+  defaultModel: MastraLanguageModel = openai_v5('gpt-4.1'),
+): MastraLanguageModel => {
   const modelFromContext = runtimeContext.get('model');
   if (modelFromContext) {
     console.log(`Using model: ${modelFromContext}`);
@@ -424,7 +427,7 @@ export const resolveModel = (runtimeContext: RuntimeContext): MastraLanguageMode
       'Invalid model provided. Model must be a MastraLanguageModel instance (e.g., openai("gpt-4"), anthropic("claude-3-5-sonnet"), etc.)',
     );
   }
-  return openai_v5('gpt-4.1'); // Default model
+  return defaultModel;
 };
 
 // Type guard to check if object is a valid MastraLanguageModel
@@ -521,6 +524,63 @@ export const mergeGitignoreFiles = (targetContent: string, templateContent: stri
   // Add template section header
   result.push(`# Added by template: ${templateSlug}`);
   result.push(...newEntries);
+
+  return result.join('\n');
+};
+
+// Helper function to merge .env files intelligently
+export const mergeEnvFiles = (
+  targetContent: string,
+  templateVariables: Record<string, string>,
+  templateSlug: string,
+): string => {
+  // Parse existing target .env file
+  const targetLines = targetContent.replace(/\r\n/g, '\n').split('\n');
+  const existingVars = new Set<string>();
+
+  // Extract existing variable names (handle comments and empty lines)
+  for (const line of targetLines) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const equalIndex = trimmed.indexOf('=');
+      if (equalIndex > 0) {
+        const varName = trimmed.substring(0, equalIndex).trim();
+        existingVars.add(varName);
+      }
+    }
+  }
+
+  // Filter out variables that already exist
+  const newVars: Array<{ key: string; value: string }> = [];
+  for (const [key, value] of Object.entries(templateVariables)) {
+    if (!existingVars.has(key)) {
+      newVars.push({ key, value });
+    } else {
+      console.log(`⚠ Skipping existing environment variable: ${key} (already exists in .env)`);
+    }
+  }
+
+  // If no new variables, return original content
+  if (newVars.length === 0) {
+    return targetContent;
+  }
+
+  // Build merged content
+  const result: string[] = [...targetLines];
+
+  // Add a blank line if the file doesn't end with one
+  const lastLine = result[result.length - 1];
+  if (result.length > 0 && lastLine && lastLine.trim() !== '') {
+    result.push('');
+  }
+
+  // Add template section header
+  result.push(`# Added by template: ${templateSlug}`);
+
+  // Add new environment variables
+  for (const { key, value } of newVars) {
+    result.push(`${key}=${value}`);
+  }
 
   return result.join('\n');
 };

@@ -45,6 +45,7 @@ import {
   gitAddAndCommit,
   resolveTargetPath,
   mergeGitignoreFiles,
+  mergeEnvFiles,
   resolveModel,
 } from '../../utils';
 
@@ -164,7 +165,7 @@ const discoverUnitsStep = createStep({
 
     try {
       const agent = new Agent({
-        model: resolveModel(runtimeContext),
+        model: resolveModel(runtimeContext, openai('gpt-4.1')),
         instructions: `You are an expert at analyzing Mastra projects.
 
 Your task is to scan the provided directory and identify all available units (agents, workflows, tools, MCP servers, networks).
@@ -839,6 +840,55 @@ const programmaticFileCopyStep = createStep({
         });
       }
 
+      // Handle .env file merging with template variables
+      try {
+        const { variables } = inputData;
+        if (variables && Object.keys(variables).length > 0) {
+          const targetEnv = resolve(targetPath, '.env');
+          const targetExists = existsSync(targetEnv);
+
+          if (!targetExists) {
+            // Target has no .env - create new one with template variables
+            const envContent = [
+              `# Environment variables for ${slug}`,
+              ...Object.entries(variables).map(([key, value]) => `${key}=${value}`),
+            ].join('\n');
+
+            await writeFile(targetEnv, envContent, 'utf-8');
+            copiedFiles.push({
+              source: '[template variables]',
+              destination: targetEnv,
+              unit: { kind: 'other', id: 'env' },
+            });
+            console.log(`✓ Created .env file with ${Object.keys(variables).length} template variables`);
+          } else {
+            // Both exist - merge them intelligently
+            const targetContent = await readFile(targetEnv, 'utf-8');
+            const mergedContent = mergeEnvFiles(targetContent, variables, slug);
+
+            if (mergedContent !== targetContent) {
+              const addedLines = mergedContent.split('\n').length - targetContent.split('\n').length;
+              await writeFile(targetEnv, mergedContent, 'utf-8');
+              copiedFiles.push({
+                source: '[template variables]',
+                destination: targetEnv,
+                unit: { kind: 'other', id: 'env-merge' },
+              });
+              console.log(`✓ Merged new environment variables into existing .env file (${addedLines} new entries)`);
+            } else {
+              console.log('ℹ No new environment variables to add (all already exist in .env)');
+            }
+          }
+        }
+      } catch (e) {
+        conflicts.push({
+          unit: { kind: 'other', id: 'env' },
+          issue: `Failed to handle .env file: ${e instanceof Error ? e.message : String(e)}`,
+          sourceFile: '.env',
+          targetFile: '.env',
+        });
+      }
+
       // Commit the copied files
       if (copiedFiles.length > 0) {
         try {
@@ -934,7 +984,7 @@ const intelligentMergeStep = createStep({
       const agentBuilder = new AgentBuilder({
         projectPath: targetPath,
         mode: 'template',
-        model: resolveModel(runtimeContext),
+        model: resolveModel(runtimeContext, openai('gpt-4.1')),
         instructions: `
 You are an expert at integrating Mastra template components into existing projects.
 
@@ -1325,7 +1375,7 @@ INTEGRATED UNITS:
 ${JSON.stringify(orderedUnits, null, 2)}
 
 Be thorough and methodical. Always use listDirectory to verify actual file existence before fixing imports.`,
-        model: resolveModel(runtimeContext),
+        model: resolveModel(runtimeContext, openai('gpt-4.1')),
         tools: {
           validateCode: allTools.validateCode,
           readFile: allTools.readFile,
@@ -1548,6 +1598,7 @@ export const agentBuilderTemplateWorkflow = createWorkflow({
       commitSha: cloneResult.commitSha,
       slug: cloneResult.slug,
       targetPath: initData.targetPath,
+      variables: initData.variables,
     };
   })
   .then(programmaticFileCopyStep)

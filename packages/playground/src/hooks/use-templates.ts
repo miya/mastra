@@ -171,15 +171,9 @@ export const useAgentBuilderWorkflow = () => {
 
 export const useCreateTemplateInstallRun = () => {
   return useMutation({
-    mutationFn: async ({
-      params,
-      runId,
-    }: {
-      params: TemplateInstallationRequest & { runtimeContext?: RuntimeContext };
-      runId?: string;
-    }) => {
+    mutationFn: async ({ runId }: { runId?: string }) => {
       const template = client.getAgentBuilderAction('merge-template');
-      return await template.createRun(params, runId);
+      return await template.createRun({ runId });
     },
   });
 };

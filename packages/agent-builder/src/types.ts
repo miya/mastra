@@ -105,6 +105,7 @@ export const AgentBuilderInputSchema = z.object({
   ref: z.string().optional().describe('Tag/branch/commit to checkout (defaults to main/master)'),
   slug: z.string().optional().describe('Slug for branch/scripts; defaults to inferred from repo'),
   targetPath: z.string().optional().describe('Project path to merge into; defaults to current directory'),
+  variables: z.record(z.string()).optional().describe('Environment variables to set in .env file'),
 });
 
 export const MergePlanSchema = z.object({
@@ -140,6 +141,7 @@ export const FileCopyInputSchema = z.object({
   commitSha: z.string(),
   slug: z.string(),
   targetPath: z.string().optional(),
+  variables: z.record(z.string()).optional(),
 });
 
 export const FileCopyResultSchema = z.object({
