@@ -30,6 +30,6 @@
     ".next/types/**/*.ts",
     "src/content/en/content/_meta.js",
     "theme.config.tsx"
-  ],
+, "config/redirects.mjs"  ],
   "exclude": ["node_modules"]
 }
