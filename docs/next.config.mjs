@@ -4,7 +4,7 @@ import { initGT } from "gt-next/config";
 import { transformerNotationDiff } from "@shikijs/transformers";
 import path from "path";
 import { readFileSync } from "fs";
-import { redirectList } from './config/redirects.mjs'
+import { redirectList } from "./config/redirects.mjs";
 
 const withNextra = nextra({
   search: {

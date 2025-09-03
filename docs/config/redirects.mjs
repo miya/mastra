@@ -166,7 +166,8 @@ export const redirectList = [
     permanent: true,
   },
   {
-    source: "/:locale/docs/memory/getting-started#conversation-history-last-messages",
+    source:
+      "/:locale/docs/memory/getting-started#conversation-history-last-messages",
     destination: "/:locale/docs/memory/overview",
     permanent: true,
   },
@@ -716,5 +717,5 @@ export const redirectList = [
     source: "/:locale/docs/workflows/streaming",
     destination: "/:locale/docs/streaming/overview",
     permanent: true,
-  }
+  },
 ];
