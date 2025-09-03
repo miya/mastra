@@ -118,9 +118,16 @@ export default function Template() {
       // Check if the run exists and start watching
       try {
         getTemplateInstallRun({ runId })
-          .then(() => {
-            console.log('🔄 Starting to watch template installation');
-            return watchInstall.mutateAsync({ runId });
+          .then((runData: any) => {
+            const snapshot = runData.snapshot;
+            console.log('📊 Retrieved run data:', runData);
+
+            if (snapshot?.status === 'running') {
+              console.log('🔄 Starting to watch template installation');
+              return watchInstall.mutateAsync({ runId });
+            } else {
+              console.log('🔄 Run is not running, skipping watch');
+            }
           })
           .then(() => {
             // Clean up URL parameters after successful resume
