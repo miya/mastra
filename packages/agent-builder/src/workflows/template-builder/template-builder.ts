@@ -44,29 +44,9 @@ import {
   gitRevParse,
   gitAddAndCommit,
   resolveTargetPath,
+  mergeGitignoreFiles,
+  resolveModel,
 } from '../../utils';
-
-// Helper function to resolve the model to use
-const resolveModel = (runtimeContext: any): MastraLanguageModel => {
-  const modelFromContext = runtimeContext.get('model');
-  if (modelFromContext) {
-    // Type check to ensure it's a MastraLanguageModel
-    if (isValidMastraLanguageModel(modelFromContext)) {
-      return modelFromContext;
-    }
-    throw new Error(
-      'Invalid model provided. Model must be a MastraLanguageModel instance (e.g., openai("gpt-4"), anthropic("claude-3-5-sonnet"), etc.)',
-    );
-  }
-  return openai('gpt-4.1'); // Default model
-};
-
-// Type guard to check if object is a valid MastraLanguageModel
-const isValidMastraLanguageModel = (model: any): model is MastraLanguageModel => {
-  return (
-    model && typeof model === 'object' && typeof model.modelId === 'string' && typeof model.generate === 'function'
-  );
-};
 
 // Step 1: Clone template to temp directory
 const cloneTemplateStep = createStep({
@@ -799,7 +779,7 @@ const programmaticFileCopyStep = createStep({
               destination: targetMastraIndex,
               unit: { kind: 'other', id: 'mastra-index' },
             });
-            console.log('✓ Copied src/mastra/index.ts from template to target');
+            console.log('✓ Copied Mastra index file from template');
           }
         }
       } catch (e) {
@@ -808,6 +788,54 @@ const programmaticFileCopyStep = createStep({
           issue: `Failed to ensure Mastra index file: ${e instanceof Error ? e.message : String(e)}`,
           sourceFile: 'src/mastra/index.ts',
           targetFile: 'src/mastra/index.ts',
+        });
+      }
+
+      // Handle .gitignore file merging
+      try {
+        const targetGitignore = resolve(targetPath, '.gitignore');
+        const templateGitignore = resolve(templateDir, '.gitignore');
+
+        const targetExists = existsSync(targetGitignore);
+        const templateExists = existsSync(templateGitignore);
+
+        if (templateExists) {
+          if (!targetExists) {
+            // Target has no .gitignore - copy template's completely
+            await copyFile(templateGitignore, targetGitignore);
+            copiedFiles.push({
+              source: templateGitignore,
+              destination: targetGitignore,
+              unit: { kind: 'other', id: 'gitignore' },
+            });
+            console.log('✓ Copied .gitignore from template to target');
+          } else {
+            // Both exist - merge them intelligently
+            const targetContent = await readFile(targetGitignore, 'utf-8');
+            const templateContent = await readFile(templateGitignore, 'utf-8');
+
+            const mergedContent = mergeGitignoreFiles(targetContent, templateContent, slug);
+
+            if (mergedContent !== targetContent) {
+              const addedLines = mergedContent.split('\n').length - targetContent.split('\n').length;
+              await writeFile(targetGitignore, mergedContent, 'utf-8');
+              copiedFiles.push({
+                source: templateGitignore,
+                destination: targetGitignore,
+                unit: { kind: 'other', id: 'gitignore-merge' },
+              });
+              console.log(`✓ Merged template .gitignore entries into existing .gitignore (${addedLines} new entries)`);
+            } else {
+              console.log('ℹ No new .gitignore entries to add from template');
+            }
+          }
+        }
+      } catch (e) {
+        conflicts.push({
+          unit: { kind: 'other', id: 'gitignore' },
+          issue: `Failed to handle .gitignore file: ${e instanceof Error ? e.message : String(e)}`,
+          sourceFile: '.gitignore',
+          targetFile: '.gitignore',
         });
       }
 

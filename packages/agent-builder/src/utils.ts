@@ -464,3 +464,63 @@ export const resolveTargetPath = (inputData: any, runtimeContext: any): string =
 
   return cwd;
 };
+
+// Helper function to merge .gitignore files intelligently
+export const mergeGitignoreFiles = (targetContent: string, templateContent: string, templateSlug: string): string => {
+  // Normalize line endings and split into lines
+  const targetLines = targetContent.replace(/\r\n/g, '\n').split('\n');
+  const templateLines = templateContent.replace(/\r\n/g, '\n').split('\n');
+
+  // Parse existing target entries (normalize for comparison)
+  const existingEntries = new Set<string>();
+
+  for (const line of targetLines) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      // Normalize path for comparison (remove leading ./, handle different separators)
+      const normalized = trimmed.replace(/^\.\//, '').replace(/\\/g, '/');
+      existingEntries.add(normalized);
+    }
+  }
+
+  // Extract new entries from template that don't already exist
+  const newEntries: string[] = [];
+  for (const line of templateLines) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const normalized = trimmed.replace(/^\.\//, '').replace(/\\/g, '/');
+      if (!existingEntries.has(normalized)) {
+        // Check for conflicts (e.g., !file vs file)
+        const isNegation = normalized.startsWith('!');
+        const basePath = isNegation ? normalized.slice(1) : normalized;
+        const hasConflict = isNegation ? existingEntries.has(basePath) : existingEntries.has('!' + basePath);
+
+        if (!hasConflict) {
+          newEntries.push(trimmed);
+        } else {
+          console.log(`⚠ Skipping conflicting .gitignore rule: ${trimmed} (conflicts with existing rule)`);
+        }
+      }
+    }
+  }
+
+  // If no new entries, return original content
+  if (newEntries.length === 0) {
+    return targetContent;
+  }
+
+  // Build merged content
+  const result: string[] = [...targetLines];
+
+  // Add a blank line if the file doesn't end with one
+  const lastLine = result[result.length - 1];
+  if (result.length > 0 && lastLine && lastLine.trim() !== '') {
+    result.push('');
+  }
+
+  // Add template section header
+  result.push(`# Added by template: ${templateSlug}`);
+  result.push(...newEntries);
+
+  return result.join('\n');
+};
